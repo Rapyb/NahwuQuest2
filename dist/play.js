@@ -5,7 +5,26 @@ let user=null,pos=64;
 function message(s,bad=false){const el=$('notice');if(el){el.textContent=s;el.className=bad?'warn notice':'success notice'}}
 function btn(label,action,cls=''){const b=document.createElement('button');b.type='button';b.textContent=label;b.className=cls;b.onclick=action;return b}
 function heading(tag,s){const h=document.createElement(tag);h.textContent=s;return h}
-function portrait(i,gear=user?.gear||0,character=user?.character||0,accessory=user?.accessory||0){const c=document.createElement('canvas');c.width=72;c.height=56;drawEquipment(c,i,gear,character,accessory);return c}
+const animatedPortraits=new Map();
+let flameTimer=null, flameFrame=0;
+function animateFlames(){
+  flameFrame=(flameFrame+1)%6;
+  for(const [canvas,draw] of animatedPortraits){
+    if(!canvas.isConnected)animatedPortraits.delete(canvas);
+    else if(!document.hidden && !canvas.closest('dialog:not([open])'))draw(flameFrame);
+  }
+  if(!animatedPortraits.size){clearInterval(flameTimer);flameTimer=null}
+}
+function portrait(i,gear=user?.gear||0,character=user?.character||0,accessory=user?.accessory||0){
+  const c=document.createElement('canvas');c.width=72;c.height=56;
+  const draw=frame=>drawEquipment(c,i,gear,character,accessory,frame);
+  draw(0);
+  if(gear===1&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    animatedPortraits.set(c,draw);
+    if(flameTimer===null)flameTimer=setInterval(animateFlames,135);
+  }
+  return c;
+}
 function show(title){panel.replaceChildren();let h=heading('h2',title);h.id='dialogTitle';panel.append(h);if(!dialog.open)dialog.showModal();dialog.scrollTop=0}
 function view(){const route=location.hash.slice(1);return user&&(route!=='studio'||isTeacher)&&Object.hasOwn(menu,route)?route:'home'}
 function go(key){if(location.hash==='#'+key)render();else location.hash=key}
@@ -67,7 +86,9 @@ function equipmentView(){
       },'lookCard');
       const need=current.needs[i];
       const detail=current.key==='character'?characters[i][1]:need>count?'🔒 '+need+' quest':'Tersedia';
-      tile.append(picture({...draft,[current.key]:i}),heading('strong',label),heading('small',detail));
+      tile.classList.toggle('characterCard',current.key==='character');
+      const thumbnail=current.key==='character'?portrait(0,0,i,0):picture({...draft,[current.key]:i});
+      tile.append(thumbnail,heading('strong',label),heading('small',detail));
       tile.setAttribute('aria-pressed',i===draft[current.key]);grid.append(tile);
     });
   }

@@ -79,7 +79,7 @@ def api(db, data):
     pose = data.get("pose")
     if room and code == data.get("code") and isinstance(pose, dict):
         member = room["members"][key]
-        for field, maximum in (("x",2140), ("jump",10**9), ("skin",31), ("accessory",4), ("gear",24), ("character",11)):
+        for field, maximum in (("x",2140), ("jump",10**9), ("skin",31), ("accessory",12), ("gear",24), ("character",11)):
             value = pose.get(field)
             if type(value) is int and 0 <= value <= maximum:
                 member[field] = value

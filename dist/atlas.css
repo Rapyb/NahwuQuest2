@@ -56,3 +56,5 @@ button.trailSite:is(:hover,:active):enabled{transform:translateX(-50%)}
 .lookCard small{color:#d4c7ab}
 .fitting button[aria-pressed=true]{border-color:#e7bd76;background:#413530;color:#ffe1ac}
 @media(max-width:720px){.fitting{grid-template-columns:minmax(0,1fr)}.fittingPreview{position:static}.lookStage canvas{width:180px}.fittingGallery{padding:12px}.lookGrid{grid-template-columns:repeat(auto-fill,minmax(90px,1fr))}}
+.lookCard.characterCard canvas{width:100%;aspect-ratio:1.25;object-fit:contain;background:radial-gradient(ellipse at 50% 85%,#424251 0%,transparent 70%)}
+.rankTable td button{color:#ffdb94;text-align:left}

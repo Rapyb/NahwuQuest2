@@ -80,7 +80,7 @@ def valid_profile(p, worlds):
                        and 0 < n < len(quests[i]["questions"])},
                 character=character if type(character) is int and 0<=character<12 else 0,
                 gear=unlocked("gear",[0,4,8,12,2,7,5,3,4,9,10,15,7,3,6,4,5,11,6,8,9,2,3,4,5]),
-                accessory=unlocked("accessory",[0,2,4,6,8]),
+                accessory=unlocked("accessory",[0,2,4,6,8,1,3,5,7,9,11,14,18]),
                 skin=skin if type(skin) is int and 0 <= skin < len(gates) and gates[skin] <= len(done) else 0,
                 world=world, worldKey=visible[world]["key"] if visible else None)
 
@@ -184,15 +184,16 @@ def account_action(db, data):
         for account_id, raw in db.execute("SELECT id,profile FROM accounts"):
             profile=json.loads(raw)
             rp=scores.get(token_hash(profile["arenaToken"]),0)
-            ranking.append((rp,profile["name"],account_id))
+            look = {key: profile.get(key, 0) for key in ("character", "skin", "gear", "accessory")}
+            ranking.append((rp,profile["name"],account_id,look))
         ranking.sort(key=lambda row:(-row[0],row[1].casefold(),row[2]))
         page=[]; mine=None; previous=None
-        for i,(rp,name,ident) in enumerate(ranking):
+        for i,(rp,name,ident,look) in enumerate(ranking):
             if rp!=previous:
                 place=i+1
                 previous=rp
             if ident==owner or offset<=i<offset+25:
-                row=dict(place=place,name=name,rp=rp,rank=rank(rp),me=ident==owner)
+                row=dict(place=place,name=name,rp=rp,rank=rank(rp),me=ident==owner,look=look)
                 if ident==owner: mine=row
                 if offset<=i<offset+25: page.append(row)
         return dict(rows=page,mine=mine,total=len(ranking))
