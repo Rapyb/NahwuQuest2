@@ -1,11 +1,11 @@
 'use strict';
 const newOutfits=[
  ['Baju zirah','armor','#a3aebc'],['Hoodie malam','hood','#685689'],['Seragam sekolah','tie','#f3e6d8'],
- ['Jaket varsity','jacket','#9e5157'],['Jubah penyihir','robe','#65528b'],['Seragam pramuka','tie','#c4a477'],
+ ['Jaket varsity','jacket','#9e5157'],['Jubah kegelapan','robe','#65528b'],['Seragam pramuka','tie','#c4a477'],
  ['Mantel hujan','hood','#d9ad44'],['Zirah samudra','armor','#478996'],['Kimono sakura','robe','#d09aab'],
  ['Jas laboratorium','jacket','#d5e3df'],['Pakaian astronaut','helmet','#ddd6ca'],['Jersey lapangan','sport','#55a484'],
  ['Jaket pilot','jacket','#997255'],['Hoodie mint','hood','#82bbaa'],['Setelan detektif','hat','#ab997c'],
- ['Zirah kerajaan','armor','#b9a35d'],['Seragam pelaut','tie','#92b6cc'],['Jubah penjaga gurun','robe','#d19b6b'],
+ ['Zirah naga','armor','#b9a35d'],['Seragam pelaut','tie','#92b6cc'],['Jubah penjaga gurun','robe','#d19b6b'],
  ['Daster kembang','dress','#b45e80'],['Daster batik','batik','#5c9195']
 ];
 for(const [name,,color] of newOutfits){outfits.push(name);colors.push(color);gates.push(2+Math.floor((outfits.length-13)*16/19))}
@@ -58,12 +58,6 @@ function drawEquipment(canvas,skin,gear,character=0,accessory=0,frame=0){
   const cut=newOutfits[skin-12]?.[1]||vintageCuts[skin], color=colors[skin];
   const r=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x,y,w,h)};
   g.clearRect(0,0,canvas.width,canvas.height);
-  if(accessory===11){
-    for(const dir of [-1,1])for(let k=0;k<7;k++){
-      r(cx+dir*(10+k)-2,y-4+k,4,13-k,'#508b84');
-      r(cx+dir*(10+k)-1,y-2+k,2,7-k,'#b3eed5');
-    }
-  }
   // Boots and legs stay on the same ground line for tall and short avatars.
   for(const foot of [x+2,x+w-6]){r(foot,hip-1,4,legs,ink);r(foot-1,base-2,6,2,'#5e463b')}
   r(cx-5,head,10,10,tone);r(cx-6,head+4,12,3,tone);
@@ -185,4 +179,105 @@ async function globalBoard(offset=0){
     if(offset)host.append(btn('← Sebelumnya',()=>globalBoard(offset-25)));
     if(offset+25<data.total)host.append(btn('Berikutnya →',()=>globalBoard(offset+25)));
   }catch(err){host.append(heading('p',err.message),btn('Coba lagi',()=>globalBoard(offset)))}
+}
+
+// Lapisan efek pixel NahwuQuest. Koordinat mengikuti sprite 72 × 56.
+function drawLookEffects(canvas, skin, gear, character, accessory, frame) {
+  const g = canvas.getContext('2d');
+  const [, , , width, body, legs] = characters[character] || characters[0];
+  const cx = 36, hip = 54 - legs, neck = hip - body, head = neck - 10;
+  const hand = cx - Math.floor(width / 2) + width, palm = hip - 3;
+  const a = frame * Math.PI / 12, wave = Math.sin(a), lift = Math.cos(a);
+  const dot = (x,y,c,w=1,h=1) => { g.fillStyle=c; g.fillRect(Math.round(x),Math.round(y),w,h); };
+  function spark(x,y,c,t=0) {
+    const bright = Math.sin(a+t);
+    if(bright < -.65) return;
+    dot(x,y,c);
+    if(bright>.3){ dot(x-1,y,c,3); dot(x,y-1,c,1,3); }
+  }
+  function line(x,y,dx,dy,n,color) {
+    for(let i=0;i<n;i++)dot(x+i*dx,y+i*dy,color);
+  }
+  function curl(x,y,length,amplitude,color,phase=0) {
+    for(let i=0;i<length;i++)dot(x+i,y+amplitude*Math.sin(a+phase+i*.5),color);
+  }
+  // Kostum ditaruh di belakang tubuh agar wajah dan genggaman tetap terbaca.
+  g.save();
+  g.globalCompositeOperation='destination-over';
+  if(skin===16){ // Jubah kegelapan
+    for(let i=0;i<4;i++){
+      g.globalAlpha=.75-i*.12;
+      curl(cx-15+i*2,hip-2-i*2,25-i*3,2+i*.4,'#9a75d2',i);
+      dot(cx-10-i+Math.sin(a+i)*2,hip-4-(frame+i*5)%19,'#aa89e0',2,2);
+    }
+  }
+  if(skin===27){ // Zirah naga: kepala, tanduk, badan beruas, ekor.
+    const ox=cx-16+Math.cos(a)*3, oy=neck-6+wave*2;
+    for(let i=13;i>=0;i--){
+      const bx=ox-i*.63, by=oy+4+i*.95+Math.sin(a+i*.5)*2;
+      dot(bx,by,i%2?'#438f78':'#54ad89',i>9?2:4,3);
+      if(i<9 && i%2===0)dot(bx-1,by-1,'#efc76b',2,2);
+    }
+    dot(ox-2,oy,'#478c76',7,5);dot(ox+3,oy+2,'#81c991',4,2);
+    dot(ox+2,oy+1,'#ffdc80');dot(ox-2,oy-3,'#d7b86a',1,3);
+    dot(ox+1,oy-2,'#ffe9a3',1,2);
+  }
+  if(skin===20 || skin===19 || skin===22){
+    for(let i=0;i<4;i++){
+      const t=(frame+i*6)%24;
+      const x=cx+(i%2?1:-1)*(11+i%3)+Math.sin(a+i)*2;
+      const y=skin===22?hip-t:head+t;
+      dot(x,y,skin===20?'#ef9ebb':skin===19?'#85dee5':'#b4caff',2,2);
+      if(skin===20)dot(x+1,y-1,'#ffd6d9');
+      if(skin===22)spark(x,y,'#dae8ff',i);
+    }
+  }
+  if(accessory===11){
+    for(const d of [-1,1]){
+      const spread=7+4*wave;
+      for(let j=0;j<10;j++){
+        const x=cx+d*(8+j*spread/9), y=neck+5-j*.9+lift*2;
+        dot(x,y,'#508b84',3,3+Math.floor((9-j)/2));
+        dot(x,y+1,'#a5e5cc',2,2);
+        dot(x,y+7,'#78bba5',2,2);
+      }
+      spark(cx+d*(12+spread),neck+3+wave*4,'#e6ffc0',d);
+    }
+  }
+  g.restore();
+  switch(accessory){
+    case 1:spark(cx+1,neck+5,'#fff1ac');break;
+    case 2:line(cx+5,head-3,-.45,-1,4,'#81cbb7');dot(cx+3+wave*2,head-7,'#f6d382',2,2);break;
+    case 3:for(const x of [cx-5,cx+1])dot(x+frame%5,head+4,'#c6fff5');break;
+    case 4:for(let i=0;i<3;i++)dot(cx+9+i*2,head+7-Math.abs(Math.sin(a+i))*3,'#75ded6',1,2);break;
+    case 5:line(cx+10,head,1,wave*.5,4,'#f9a6be');break;
+    case 6:curl(cx-14,neck+3,11,2,'#eb8d5b');break;
+    case 7:for(const d of [-1,1])spark(cx+d*7+wave,head+12,'#bcffd6',d);break;
+    case 8:spark(cx-5,head-3,'#ffb3c9');break;
+    case 9:dot(cx+6+wave,hip-5,'#e9bd7d',2,2);dot(cx+6+wave*2,hip-3,'#d39d6b',1,3);break;
+    case 10:for(const dx of [-6,0,6])spark(cx+dx,head-5,'#fff3a5',dx*.4);break;
+    case 12:
+      g.save();g.shadowColor='#ffd577';g.shadowBlur=3;
+      for(let i=0;i<4;i++){const t=a+i*Math.PI/2;spark(cx+11*Math.cos(t),head-6+3*Math.sin(t),'#ffe6a1',i);}
+      g.restore();break;
+  }
+  const tx=hand, ty=palm;
+  switch(gear){
+    case 2:for(let i=0;i<2;i++)curl(tx-6+wave*3,ty-20+i*5,14-i*3,2,'#bff8ce',i*2);break;
+    case 3:for(let i=0;i<3;i++){const t=(frame+i*8)%24;dot(tx-4+i*4+Math.sin(a+i)*2,ty-29+t*.55,'#76dfea',2,2);dot(tx-4+i*4+Math.sin(a+i)*2,ty-30+t*.55,'#d4ffff');}break;
+    case 4:dot(tx+1,ty-3+Math.floor(frame/8),'#d5fff9',2);break;
+    case 5:case 9:case 11:spark(tx+3+wave*4,ty-16+lift*3,gear===9?'#96edff':gear===11?'#dae3ff':'#ffe493');break;
+    case 6:spark(tx+2+wave*3,ty-5+lift*3,'#ffe3a0');break;
+    case 7:dot(tx,ty+6,'#ffcc70',2,2+Math.round(1+wave));break;
+    case 8:curl(tx+1,ty-8,7,1,'#e8b4ff');break;
+    case 10:line(tx-3,ty-11+lift,1,1,3,'#cfb3ff');break;
+    case 12:curl(tx-6,ty-11,8,1,'#b6d77d');break;
+    case 13:case 14:curl(tx+2,ty-8,7,2,gear===13?'#ffb8ae':'#9fdbee');break;
+    case 15:for(let i=0;i<3;i++)dot(tx+i-1,ty-10-(frame+i*7)%8,i%2?'#ff8e42':'#ffe088');break;
+    case 16:dot(tx+2+wave,ty-1+lift,'#84efe6');break;
+    case 17:dot(tx+4+wave*2,ty-7-frame%8,'#ffc792',2);dot(tx+6+wave*2,ty-10-frame%8,'#ffc792',1,4);break;
+    case 18:case 19:spark(tx+3,ty-4,gear===19?'#caedff':'#ffe89e');break;
+    case 20:dot(tx+2+frame%5,ty-2,'#efdf8e');break;
+    case 21:case 22:case 23:case 24:curl(tx+1,ty+2,5,1,gearColors[gear][1]);break;
+  }
 }

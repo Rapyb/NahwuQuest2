@@ -5,23 +5,29 @@ let user=null,pos=64;
 function message(s,bad=false){const el=$('notice');if(el){el.textContent=s;el.className=bad?'warn notice':'success notice'}}
 function btn(label,action,cls=''){const b=document.createElement('button');b.type='button';b.textContent=label;b.className=cls;b.onclick=action;return b}
 function heading(tag,s){const h=document.createElement(tag);h.textContent=s;return h}
-const animatedPortraits=new Map();
-let flameTimer=null, flameFrame=0;
-function animateFlames(){
-  flameFrame=(flameFrame+1)%6;
-  for(const [canvas,draw] of animatedPortraits){
-    if(!canvas.isConnected)animatedPortraits.delete(canvas);
-    else if(!document.hidden && !canvas.closest('dialog:not([open])'))draw(flameFrame);
+const movingLooks = new Map();
+const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+let lookTimer = 0;
+function updateLooks(){
+  const frame = motionPreference.matches ? 0 : Math.floor(performance.now()/130)%24;
+  for(const [canvas,paint] of movingLooks){
+    if(!canvas.isConnected){movingLooks.delete(canvas);continue}
+    if(document.hidden || canvas.closest('dialog:not([open])'))continue;
+    const box=canvas.getBoundingClientRect();
+    if(box.bottom>0 && box.top<innerHeight && box.right>0 && box.left<innerWidth)paint(frame);
   }
-  if(!animatedPortraits.size){clearInterval(flameTimer);flameTimer=null}
+  if(!movingLooks.size){clearInterval(lookTimer);lookTimer=0}
 }
 function portrait(i,gear=user?.gear||0,character=user?.character||0,accessory=user?.accessory||0){
   const c=document.createElement('canvas');c.width=72;c.height=56;
-  const draw=frame=>drawEquipment(c,i,gear,character,accessory,frame);
-  draw(0);
-  if(gear===1&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
-    animatedPortraits.set(c,draw);
-    if(flameTimer===null)flameTimer=setInterval(animateFlames,135);
+  function paint(frame){
+    drawEquipment(c,i,gear,character,accessory,frame%6);
+    drawLookEffects(c,i,gear,character,accessory,frame);
+  }
+  paint(0);
+  if(gear || accessory || [16,19,20,22,27].includes(i)){
+    movingLooks.set(c,paint);
+    if(!lookTimer)lookTimer=setInterval(updateLooks,130);
   }
   return c;
 }
