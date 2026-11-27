@@ -44,7 +44,15 @@ def token_hash(token):
 
 def catalog(db):
     raw, rev = db.execute("SELECT body, revision FROM catalog WHERE id=1").fetchone()
-    return json.loads(raw), rev
+    entries = json.loads(raw)
+    for index, world in enumerate(entries):
+        world.setdefault("key", index)
+        world.setdefault("visual", index % 6)
+    return entries, rev
+
+
+def active_worlds(entries):
+    return [w for w in entries if not w.get("deleted")]
 
 
 def valid_profile(p, worlds):
@@ -57,12 +65,15 @@ def valid_profile(p, worlds):
     done = list(dict.fromkeys(done))
     skin = p.get("skin", 0)
     gates = [0,1,3,6,2,4,5,8,10,12,15,18]
-    world = p.get("world", 0)
+    visible = active_worlds(worlds)
+    active_ids = {q["id"] for w in visible for q in w["quests"]}
+    key = p.get("worldKey", p.get("world", 0))
+    world = next((i for i,w in enumerate(visible) if w["key"] == key), 0)
     return dict(name=field(p.get("name"), 24), done=done,
-                steps={str(i): n for i in quests if type(n := steps.get(str(i))) is int
+                steps={str(i): n for i in active_ids if type(n := steps.get(str(i))) is int
                        and 0 < n < len(quests[i]["questions"])},
                 skin=skin if type(skin) is int and 0 <= skin < len(gates) and gates[skin] <= len(done) else 0,
-                world=world if type(world) is int and 0 <= world < len(worlds) else 0)
+                world=world, worldKey=visible[world]["key"] if visible else None)
 
 
 def account_action(db, data):
@@ -108,18 +119,30 @@ def account_action(db, data):
         db.execute("DELETE FROM sessions WHERE digest=?", (token_hash(session),))
         return {"ok":True}
     worlds, version = catalog(db)
+    visible = active_worlds(worlds)
     if action == "publish":
         check(teacher(owner), "Hanya guru yang dapat menerbitkan perubahan.")
         check(data.get("version")==version, "Atlas telah berubah. Muat ulang sebelum mengedit kembali.")
         wid = data.get("world")
-        check(type(wid) is int and 0<=wid<=len(worlds), "Wilayah tidak tersedia.")
-        if data.get("kind") == "map":
-            if wid == len(worlds):
-                worlds.append({"quests":[]})
-            worlds[wid].update(title=field(data.get("title"),100), theme=field(data.get("theme"),300))
+        check(type(wid) is int and 0<=wid<=len(visible), "Wilayah tidak tersedia.")
+        if data.get("kind") == "deleteMap":
+            check(wid < len(visible), "Map tidak ditemukan.")
+            world = visible[wid]
+            # Retain only IDs to preserve XP and prevent quest ID reuse.
+            worlds[world["key"]] = {"key":world["key"], "deleted":True,
+                                    "quests":[{"id":q["id"]} for q in world["quests"]]}
+        elif data.get("kind") == "map":
+            if wid == len(visible):
+                world = {"key":len(worlds), "visual":len(worlds)%6, "quests":[]}
+                worlds.append(world)
+            else:
+                world = visible[wid]
+            visual = data.get("visual", world["visual"])
+            check(type(visual) is int and 0 <= visual < 6, "Tema visual tidak tersedia.")
+            world.update(visual=visual,title=field(data.get("title"),100), theme=field(data.get("theme"),300))
         else:
-            check(wid<len(worlds), "Simpan map terlebih dahulu.")
-            quests = worlds[wid]["quests"]
+            check(wid<len(visible), "Simpan map terlebih dahulu.")
+            quests = visible[wid]["quests"]
             qid = data.get("quest")
             target = next((q for q in quests if q["id"]==qid),None)
             check(target or qid is None, "Quest tidak ditemukan.")
@@ -138,13 +161,18 @@ def account_action(db, data):
             target.update(lesson=lesson,questions=questions)
         version += 1
         db.execute("UPDATE catalog SET body=?,revision=? WHERE id=1",(json.dumps(worlds),version))
-        return dict(worlds=worlds,version=version)
+        return dict(worlds=active_worlds(worlds),version=version)
     raw, revision = db.execute("SELECT profile,revision FROM accounts WHERE id=?",(owner,)).fetchone()
     stored = json.loads(raw)
     if action == "save":
         check(data.get("revision")==revision, "Progres berubah di perangkat lain. Muat ulang halaman.")
         check(data.get("version")==version, "Guru telah memperbarui atlas. Muat ulang halaman.")
-        profile = valid_profile(data.get("profile"),worlds)
+        updates = data.get("profile")
+        check(isinstance(updates,dict), "Profil tidak valid.")
+        selected = updates.get("world",0)
+        if type(selected) is int and 0<=selected<len(visible):
+            updates["worldKey"] = visible[selected]["key"]
+        profile = valid_profile(updates,worlds)
         profile["arenaToken"] = stored["arenaToken"]
         db.execute("UPDATE accounts SET profile=?,revision=? WHERE id=?",(json.dumps(profile),revision+1,owner))
         return {"revision":revision+1}
@@ -154,4 +182,4 @@ def account_action(db, data):
     score = db.execute("SELECT xp,rp FROM players WHERE id=?", (token_hash(arena),)).fetchone() or (0,0)
     from server import rank
     p.update(id=owner,arenaToken=arena,arenaXP=score[0],arenaRP=score[1],arenaRank=rank(score[1]))
-    return dict(session=session,profile=p,revision=revision,worlds=worlds,version=version,teacher=teacher(owner))
+    return dict(session=session,profile=p,revision=revision,worlds=visible,version=version,teacher=teacher(owner))

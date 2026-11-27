@@ -22,6 +22,11 @@ function setCatalog(data) {
   for (const world of worlds) for (const q of world.quests) {
     lessons[q.id] = q.lesson; bank[q.id] = q.questions;
   }
+  if(user){
+    user.world=Math.max(0,worlds.findIndex(w=>w.key===user.worldKey));
+    user.worldKey=worlds[user.world]?.key??null;
+    for(const [id,n] of Object.entries(user.steps))if(!bank[id]||n>=bank[id].length)delete user.steps[id];
+  }
 }
 function clearSession() {
   session = ''; user = null; isTeacher = false;
@@ -40,6 +45,7 @@ async function save(change) {
     const ownerSession=session;
     const fresh = JSON.parse(JSON.stringify(user));
     change(fresh);
+    fresh.worldKey=worlds[fresh.world]?.key??null;
     const result = await requestAccount('save', {profile:fresh, revision, version});
     if (session !== ownerSession) return false;
     revision = result.revision; user = fresh; return true;

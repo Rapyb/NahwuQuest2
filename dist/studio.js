@@ -5,34 +5,43 @@ function studio() {
   for(const [wid,world] of worlds.entries()) {
     const section=document.createElement('section');section.className='box editorSection';
     section.append(heading('h2',world.title),heading('p',world.theme),
-      btn('Ubah map',()=>mapForm(wid)),btn('+ Buat quest',()=>questForm(wid)));
+      btn('Ubah map',()=>mapForm(wid)),btn('+ Buat quest',()=>questForm(wid)),btn('Hapus map',()=>deleteMapForm(wid)));
     const list=document.createElement('div');list.className='editorList';
     for(const q of world.quests) list.append(btn(q.lesson[0]+' · '+q.questions.length+' soal',()=>questForm(wid,q)));
     section.append(list);main.append(section);
   }
 }
-function editor(title, fields) {
+function editor(title, fields, submitText='Terbitkan') {
   show(title);
   const form=document.createElement('form');form.className='accountForm';panel.append(form);
-  const submit=document.createElement('button');submit.className='gold';submit.textContent='Terbitkan';
+  const submit=document.createElement('button');submit.className='gold';submit.textContent=submitText;
   const status=heading('p','');status.setAttribute('role','status');
   form.onsubmit=async e=>{
     e.preventDefault();submit.disabled=true;status.textContent='Menyimpan…';
     try {
       const data=await requestAccount('publish',{version,...fields()});
       setCatalog(data);
-      for(const [id,n] of Object.entries(user.steps)) if(n>=bank[id].length)delete user.steps[id];
-      dialog.close();render();message('Terbit. Siswa yang sedang bermain dapat memuat ulang untuk melihat perubahan.');
+
+      dialog.close();render();message(submitText==='Hapus map'?'Map telah dihapus.':'Terbit. Muat ulang untuk melihat perubahan di perangkat lain.');
     } catch(err){status.textContent=err.message} finally {submit.disabled=false}
   };
   form.append(submit,status);
   const body=document.createElement('div');body.className='editorBody';form.prepend(body);
   return body;
 }
+function deleteMapForm(wid) {
+  const world=worlds[wid];
+  const body=editor('Hapus '+world.title+'?',()=>({kind:'deleteMap',world:wid}),'Hapus map');
+  body.append(heading('p','Map dan '+world.quests.length+' quest di dalamnya akan dihapus. XP dan skin yang sudah diperoleh siswa tetap tersimpan.'),
+    btn('Batal',()=>dialog.close()));
+}
 function mapForm(wid) {
   const w=worlds[wid];
-  const form=editor(w?'Ubah map':'Buat map',()=>({kind:'map',world:wid,title:title.value,theme:theme.value}));
+  const form=editor(w?'Ubah map':'Buat map',()=>({kind:'map',world:wid,title:title.value,theme:theme.value,visual:Number(visual.value)}));
   const title=fieldInput(form,'Nama map',w?.title,{required:true,maxLength:100});
+  const label=heading('label','Tema visual map'), visual=document.createElement('select');
+  visualThemes.forEach((name,index)=>visual.add(new Option(name,index)));
+  visual.value=w?.visual??0;label.append(visual);form.append(label);
   const theme=fieldInput(form,'Tema pembelajaran',w?.theme,{required:true,maxLength:300});
 }
 function questForm(wid,q) {

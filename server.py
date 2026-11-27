@@ -11,7 +11,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from accounts import account_action, schema
+from accounts import account_action, active_worlds, catalog, schema
 
 ROOT = Path(__file__).resolve().parent
 DB = os.environ.get("NAHWU_DB", str(ROOT / "arena.sqlite3"))
@@ -87,10 +87,17 @@ def api(db, data):
         if action == "create":
             quest = data.get("quest")
             require(quest in QUESTS, "Quest tidak tersedia.")
+            entries, _ = catalog(db)
+            choices = active_worlds(entries)
+            require(choices, "Guru belum menyediakan map arena.")
+            selected = data.get("mapKey", choices[0]["key"])
+            world = next((w for w in choices if type(selected) is int and w["key"] == selected), None)
+            require(world, "Map sudah dihapus. Muat ulang lobi.")
+            arena_map = {"title":world["title"], "visual":world["visual"], "key":world["key"]}
             code = secrets.token_hex(3).upper()
             while code in rooms:
                 code = secrets.token_hex(3).upper()
-            room = rooms[code] = dict(quest=quest,phase="waiting",members={},start=0)
+            room = rooms[code] = dict(quest=quest,arenaMap=arena_map,phase="waiting",members={},start=0)
         else:
             code = data.get("code")
             room = rooms.get(code)
@@ -145,11 +152,11 @@ def api(db, data):
             db.execute("INSERT INTO rooms VALUES (?,?) ON CONFLICT(code) DO UPDATE SET body=excluded.body",(c,body))
     xp,rp=db.execute("SELECT xp,rp FROM players WHERE id=?",(key,)).fetchone()
     result=dict(xp=xp,rp=rp,rank=rank(rp),next=next((t for t,n in TIERS if t>rp),None),rooms=[
-        dict(code=c,quest=r["quest"],count=len(r["members"])) for c,r in rooms.items() if r["phase"]=="waiting" and 0<len(r["members"])<4],room=None,now=now)
+        dict(code=c,quest=r["quest"],arenaMap=r.get("arenaMap"),count=len(r["members"])) for c,r in rooms.items() if r["phase"]=="waiting" and 0<len(r["members"])<4],room=None,now=now)
     if room:
         members=room["members"]
         p=members[key]
-        result["room"]=dict(code=code,phase=room["phase"],quest=room["quest"],start=room["start"],host=key==next(iter(members)),members=[
+        result["room"]=dict(code=code,arenaMap=room.get("arenaMap"),phase=room["phase"],quest=room["quest"],start=room["start"],host=key==next(iter(members)),members=[
             {**{f:v[f] for f in ("name","ready","step","place","elapsed","left")}, "avatar":k[:16],"x":v.get("x",64),"jump":v.get("jump",0),"skin":v.get("skin",0),"me":k==key,"host":i==0,"reward":rewards(v["place"])} for i,(k,v) in enumerate(members.items())],retry=p.get("retry",0))
         if room["phase"]=="race" and now>=room["start"] and not p["place"]:
             q=room["questions"][p["step"]]

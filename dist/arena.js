@@ -13,6 +13,8 @@ function arenaView() {
   let trail=null, mapKey='', opened=-1, modalState='', latest;
   const area = $('arenaBody'), notice = $('arenaNotice');
   const token = user.arenaToken;
+  let mapKeySelected=worlds[user.world]?.key;
+  function roomTheme(room){return room.arenaMap?.visual??(room.quest==='jumlah'?3:0)}
   let current, last = '', busy = false, quest = "i'rab", inputCode = '';
   function card(title) {
     const box = document.createElement('section');
@@ -68,10 +70,10 @@ function arenaView() {
       if(dialog.open)dialog.close();
       if(r && r.phase!=='result'){
         const me=r.members.find(p=>p.me);
-        mapHost.append(heading('h2',r.quest==='jumlah'?'Lintasan kebun kurma':'Lintasan desa kitab'),
+        mapHost.append(heading('h2',r.arenaMap?.title??(r.quest==='jumlah'?'Lintasan kebun kurma':'Lintasan desa kitab')),
           heading('p','← → untuk berjalan, ↑ untuk lompat. Saat balapan, kunjungi lima lokasi sesuai urutan dan tekan E atau Ambil.'));
-        trail=explore(mapHost,{name:r.code,theme:r.quest==='jumlah'?3:0,skin:user.skin,initial:me.x,
-          stops:Array.from({length:5},(_,i)=>'Pos '+(i+1)+' · '+siteAt(r.quest==='jumlah'?3:0,i)[0]),
+        trail=explore(mapHost,{name:r.code,theme:roomTheme(r),skin:user.skin,initial:me.x,
+          stops:Array.from({length:5},(_,i)=>'Pos '+(i+1)+' · '+siteAt(roomTheme(r),i)[0]),
           allowed:i=>current?.phase==='race'&&!!current?.question&&current.members.find(p=>p.me).step===i,
           enter:i=>{opened=i;modalState='';arenaQuestion()}});
       }
@@ -92,7 +94,14 @@ function arenaView() {
       for(const [id,title] of Object.entries(questNames)) select.add(new Option(title,id));
       select.value=quest;
       select.onchange=()=>{quest=select.value};
-      create.append(heading('p','2–4 pemain · 3 menit · 5 soal'),select,btn('Buat ruangan',()=>update('create',{quest}),'gold'),
+      const mapLabel=heading('label','Map multiplayer'),mapSelect=document.createElement('select');
+      worlds.forEach(w=>mapSelect.add(new Option(w.title+' · '+visualThemes[w.visual],w.key)));
+      mapSelect.value=mapKeySelected;mapSelect.onchange=()=>{mapKeySelected=Number(mapSelect.value)};
+      mapLabel.append(mapSelect);
+      const createRoom=btn('Buat ruangan',()=>update('create',{quest,mapKey:mapKeySelected}),'gold');
+      createRoom.disabled=!worlds.length;
+      if(!worlds.length)create.append(heading('p','Guru belum menyediakan map.'));
+      create.append(heading('p','2–4 pemain · 3 menit · 5 soal'),select,mapLabel,createRoom,
         heading('p','Juara mendapat 100 XP dan 30 RP. Finisher berikutnya mendapat 50 XP dan 12 RP. Kumpulkan RP untuk naik rank.'));
       const form=document.createElement('form'), input=document.createElement('input');
       input.placeholder='Kode ruangan';input.setAttribute('aria-label','Kode ruangan');input.maxLength=6;input.required=true;input.value=inputCode;
@@ -100,7 +109,7 @@ function arenaView() {
       const join=document.createElement('button');join.textContent='Gabung';
       form.append(input,join);form.onsubmit=e=>{e.preventDefault();update('join',{code:input.value.trim().toUpperCase()})};
       rooms.append(form);
-      for(const room of data.rooms) rooms.append(btn(questNames[room.quest]+' · '+room.code+' · '+room.count+'/4',()=>update('join',{code:room.code}),'roomLink'));
+      for(const room of data.rooms) rooms.append(btn(questNames[room.quest]+' · '+(room.arenaMap?.title??'Arena')+' · '+room.code+' · '+room.count+'/4',()=>update('join',{code:room.code}),'roomLink'));
       if(!data.rooms.length) rooms.append(heading('p','Belum ada ruangan terbuka. Buat ruangan dan bagikan kodenya ke temanmu.'));
       area.append(create,rooms);
       return;
@@ -121,7 +130,7 @@ function arenaView() {
       if(me.place) box.append(heading('p','Waktu finis '+me.elapsed.toFixed(2)+' detik'));
     } else if(r.question) {
       const time=heading('small','Sisa waktu '+remaining+' detik');time.id='arenaClock';
-      box.append(heading('p','Tujuan · '+siteAt(r.quest==='jumlah'?3:0,me.step)[0]+' (pos '+(me.step+1)+' dari 5)'),time,
+      box.append(heading('p','Tujuan · '+siteAt(roomTheme(r),me.step)[0]+' (pos '+(me.step+1)+' dari 5)'),time,
         btn('Jalan ke pos soal',()=>trail.goto(me.step)));
 
     }
@@ -144,8 +153,8 @@ function arenaView() {
     const state=opened+'-'+retry;
     if(state===modalState){if(!dialog.open)opened=-1;return}
     modalState=state;
-    show(siteAt(r.quest==='jumlah'?3:0,opened)[0]+' · Soal '+(opened+1));
-    panel.append(venueBanner(r.quest==='jumlah'?3:0,opened),heading('h3',r.question.prompt));
+    show(siteAt(roomTheme(r),opened)[0]+' · Soal '+(opened+1));
+    panel.append(venueBanner(roomTheme(r),opened),heading('h3',r.question.prompt));
     const choices=document.createElement('div');choices.className='choices';panel.append(choices);
     r.question.choices.forEach((choice,i)=>{
       const button=btn(choice,()=>{update('answer',{step:me.step,choice:i})});button.disabled=retry>0;choices.append(button);

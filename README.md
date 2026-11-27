@@ -38,3 +38,10 @@ Di Map, tahan ←/→ atau A/D untuk berjalan. Tekan ↑, W, atau Spasi untuk me
 Dalam satu ruangan multiplayer, pemain dapat berkeliling dan melihat karakter teman sebelum mulai. Saat lomba dimulai, kunjungi pos 1–5 secara berurutan dan buka soal di tempatnya. Tombol **Jalan ke pos soal** membantu menavigasi. Waktu, jawaban, urutan finis, dan hadiah dikelola oleh server. Peta menyinkronkan posisi lewat API arena yang sama. Setelah memperbarui deployment, minta semua pemain memuat ulang game sebelum membuat ruangan baru.
 
 Untuk memperbarui instalasi lama, salin isi paket ke root repositori yang sudah terhubung dengan Vercel dan commit ke branch produksi. Pertahankan DATABASE_URL, TEACHER_ACCOUNT_IDS, dan ARENA_BACKEND_URL (untuk GitHub Pages) dari instalasi sebelumnya. Data akun, materi guru, dan progres memakai database yang sama.
+
+## Studio Guru dan pilihan map multiplayer
+Di Studio Guru, pilih **Buat map** atau **Ubah map**, tentukan **Tema visual map**, lalu terbitkan. Pilih Desa, Pasar, Oasis, Kebun, Pelabuhan, atau Benteng. Pilihan ini mengatur latar, lokasi pengambilan quest, dan rintangan. Tema pembelajaran tetap dapat ditulis tersendiri.
+
+**Hapus map** menampilkan nama wilayah dan jumlah quest sebelum konfirmasi. Setelah dikonfirmasi, map dan materi quest ikut dihapus. XP serta skin dari quest yang sudah diselesaikan tetap dihitung. Pemain dapat memuat ulang untuk melihat perubahan. Jika seluruh map dihapus, guru dapat membuat map baru dari Studio Guru.
+
+Pada Lobi Multiplayer, pembuat ruangan memilih map serta jenis balapan sebelum menekan **Buat ruangan**. Peserta bergabung di lintasan yang sama; soal mengikuti jenis balapan. Setiap ruangan menyimpan nama dan tema map saat dibuat sehingga perubahan atau penghapusan map tidak mengganggu lomba yang sedang berjalan.

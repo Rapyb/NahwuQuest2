@@ -1,4 +1,5 @@
 'use strict';
+const visualThemes=['Desa','Pasar','Oasis','Kebun','Pelabuhan','Benteng'];
 const regionSites=[
   [['Rumah penyalin','house'],['Sumur desa','well'],['Balai musyawarah','pavilion'],['Rak naskah desa','shelf'],['Gerbang desa','gate']],
   [['Lapak rempah','spices'],['Kios kain','cloth'],['Timbangan saudagar','scale']],
