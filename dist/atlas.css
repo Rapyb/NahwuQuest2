@@ -34,3 +34,5 @@
 .rankBadge{display:inline-block;white-space:nowrap;font-weight:750;padding:2px 8px;border:1px solid currentColor;border-radius:8px;background:#23202b}
 .rankPerunggu{color:#dfac87}.rankPerak{color:#d3dbe2}.rankEmas{color:#ffda80}.rankSafir{color:#94cefa}.rankMaster{color:#e7b1ff}
 .rankTable{width:100%;border-collapse:collapse;margin:14px 0}.rankTable th,.rankTable td{text-align:left;padding:8px 5px;border-bottom:1px solid #51495d;overflow-wrap:anywhere}.rankTable .myScore{background:#393142}
+.bigSkin canvas{width:168px;height:192px;image-rendering:pixelated}
+.trailActor canvas{width:78px;height:89px;image-rendering:pixelated}

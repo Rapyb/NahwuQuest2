@@ -1,6 +1,7 @@
 'use strict';
 function studio() {
   main.append(heading('h1','Studio Guru'),heading('p','Pilih wilayah untuk menyunting materi yang dimainkan siswa.'));
+  main.append(btn('Kelola akun pemain',playerManager));
   main.append(btn('+ Buat map',()=>mapForm(worlds.length),'gold'));
   for(const [wid,world] of worlds.entries()) {
     const section=document.createElement('section');section.className='box editorSection';
@@ -70,4 +71,37 @@ function questForm(wid,q) {
     const item={legend,inputs,remove};items.push(item);row.append(remove);rows.append(row);refresh();
   }
   for(const values of q?.questions||[[]])appendRow(values);
+}
+
+async function playerManager(){
+  show('Kelola akun pemain');
+  const area=heading('section','Memuat daftar pemain…');panel.append(area);
+  try{
+    const {players}=await requestAccount('listPlayers');
+    area.replaceChildren();
+    const query=fieldInput(area,'Cari nama pengguna atau karakter');
+    const list=document.createElement('div');area.append(list);
+    function draw(){
+      list.replaceChildren();
+      for(const p of players.filter(p=>(p.login+' '+p.name).toLowerCase().includes(query.value.toLowerCase().trim()))){
+        const row=document.createElement('div');row.className='arenaRow';
+        row.append(heading('strong',p.name+' · @'+p.login),btn('Hapus akun',()=>confirmPlayerDeletion(p)));list.append(row);
+      }
+      if(!list.children.length)list.append(heading('p','Tidak ada pemain yang cocok.'));
+    }
+    query.oninput=draw;draw();
+  }catch(err){area.textContent=err.message}
+}
+function confirmPlayerDeletion(p){
+  show('Hapus akun '+p.name+'?');
+  panel.append(heading('p','Progres, perlengkapan tersimpan, posisi peringkat, dan akses masuk @'+p.login+' akan dihapus permanen.'));
+  const input=fieldInput(panel,'Ketik nama pengguna persis: '+p.login);
+  const status=heading('p','');status.setAttribute('role','status');
+  const submit=btn('Hapus permanen',async()=>{
+    submit.disabled=true;
+    try{await requestAccount('deletePlayer',{target:p.id,confirmation:input.value});dialog.close();render();message('Akun @'+p.login+' telah dihapus.')}
+    catch(err){status.textContent=err.message;submit.disabled=input.value!==p.login}
+  });
+  submit.disabled=true;input.oninput=()=>{submit.disabled=input.value!==p.login};
+  panel.append(btn('Batal',playerManager),submit,status);
 }

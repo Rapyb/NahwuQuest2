@@ -5,7 +5,8 @@ const newOutfits=[
  ['Mantel hujan','hood','#d9ad44'],['Zirah samudra','armor','#478996'],['Kimono sakura','robe','#d09aab'],
  ['Jas laboratorium','jacket','#d5e3df'],['Pakaian astronaut','helmet','#ddd6ca'],['Jersey lapangan','sport','#55a484'],
  ['Jaket pilot','jacket','#997255'],['Hoodie mint','hood','#82bbaa'],['Setelan detektif','hat','#ab997c'],
- ['Zirah kerajaan','armor','#b9a35d'],['Seragam pelaut','tie','#92b6cc'],['Jubah penjaga gurun','robe','#d19b6b']
+ ['Zirah kerajaan','armor','#b9a35d'],['Seragam pelaut','tie','#92b6cc'],['Jubah penjaga gurun','robe','#d19b6b'],
+ ['Daster kembang','dress','#b45e80'],['Daster batik','batik','#5c9195']
 ];
 for(const [name,,color] of newOutfits){outfits.push(name);colors.push(color);gates.push(0)}
 const items=[
@@ -20,30 +21,65 @@ const items=[
  ['Payung hujan','..bb../.bbbb./bbbbbb/...c../...c../..cc..'],['Obor','..b../.bab./.bbb./..c../..c..'],
  ['Kompas emas','.aaaa./abbbba/abacba/abbaba/.aaaa.'],['Gitar mini','...cc/...cc/..bc./.abba/aabba/.aaa.'],
  ['Kunci kuno','aaa../aba../aaa../.c.../.ccc./.c...'],['Kamera','..aa../aaaaaa/abbaba/ababba/aaaaaa'],
- ['Gulungan peta','cccccc/abbbba/ababba/abbaba/cccccc']
+ ['Gulungan peta','cccccc/abbbba/ababba/abbaba/cccccc'],
+ ['Pensil kuning','...ab/..ab./.ab../ab.../c....'],['Pena tinta','...aa/..aa./.aa../ab.../c....'],
+ ['Penggaris','...aa/..aba/.aba./aba../aa...'],['Kuas lukis','...bb/..bba/.aa../.c.../c....']
 ];
-function drawEquipment(canvas,skin,gear){
-  sprite(canvas,skin);
-  const g=canvas.getContext('2d');
-  function rect(x,y,w,h,color){g.fillStyle=color;g.fillRect(x,y,w,h)}
-  if(skin>=12){
-    const [,cut,color]=newOutfits[skin-12], trim='#f1dfb9', ink='#48415a';
-    switch(cut){
-      case 'armor':rect(3,14,6,4,color);rect(14,14,6,4,color);rect(6,18,10,1,trim);rect(7,4,10,3,color);rect(9,3,6,1,trim);break;
-      case 'hood':rect(4,4,14,4,color);rect(4,7,3,8,color);rect(15,7,3,8,color);rect(8,15,1,4,trim);rect(13,15,1,4,trim);break;
-      case 'tie':rect(7,15,8,2,trim);rect(10,16,2,5,'#9a4649');rect(6,21,10,2,ink);break;
-      case 'jacket':rect(9,15,4,7,trim);rect(4,16,2,5,color);rect(16,16,2,5,color);rect(13,17,3,1,ink);break;
-      case 'robe':rect(5,20,13,4,color);for(let j=0;j<6;j++)rect(7+j,15+j,2,1,trim);rect(6,20,10,1,ink);break;
-      case 'helmet':rect(3,3,16,12,color);rect(5,5,12,8,'#4a768d');rect(6,6,5,2,'#a5d9db');rect(8,17,6,3,ink);break;
-      case 'sport':rect(4,15,4,2,trim);rect(14,15,4,2,trim);rect(10,17,3,1,trim);rect(12,18,1,3,trim);break;
-      case 'hat':rect(6,2,10,5,color);rect(3,6,16,2,ink);rect(8,16,6,2,trim);break;
-    }
+// Shared pixel grid keeps feet, sleeves and held items aligned on every body shape.
+const characters=[
+  ['Raka','Petualang','Laki-laki',14,17,9,'crop','#d29870','#403341'],
+  ['Sari','Petani','Perempuan',15,15,8,'straw','#bd815d','#533733'],
+  ['Bayu','Petani','Laki-laki',19,15,7,'strawbeard','#a66d51','#413331'],
+  ['Nisa','Siswi','Perempuan',11,13,7,'braids','#e4aa83','#43333c'],
+  ['Arif','Siswa','Laki-laki',11,15,9,'glasses','#bc8461','#3a3341'],
+  ['Laras','Penyihir','Perempuan',11,18,11,'witch','#d59677','#744f69'],
+  ['Damar','Penyihir','Laki-laki',16,16,8,'sage','#ad795a','#ded4c0'],
+  ['Ayu','Pelaut','Perempuan',13,17,10,'bandana','#ab7052','#483246'],
+  ['Bima','Pandai besi','Laki-laki',20,17,8,'beard','#b37b60','#533e34'],
+  ['Ratih','Pustakawan','Perempuan',13,16,9,'bun','#d59a72','#553c37'],
+  ['Fajar','Kurir','Laki-laki',11,17,11,'cap','#c38569','#473a32'],
+  ['Intan','Perajin','Perempuan',17,14,7,'curls','#9c664c','#392d32']
+];
+const vintageCuts=['jacket','robe','robe','armor','sport','tie','jacket','hood','robe','jacket','robe','sport'];
+const vintageNames=['Rompi desa','Jubah senja','Kaftan emas','Zirah oasis','Kemeja kebun','Blus pelaut','Jas juru tulis','Tunik giok','Mantel astronom','Jaket mercusuar','Jubah ahli nahwu','Jersey bintang'];
+outfits.splice(0,12,...vintageNames);
+function drawEquipment(canvas,skin,gear,character=0){
+  const [, , ,w,body,legs,hair,tone,hairColor]=characters[character]||characters[0];
+  const g=canvas.getContext('2d'),ink='#382f3d',white='#f1dfbf',cx=18,base=46;
+  const x=cx-Math.floor(w/2), hip=base-legs, y=hip-body, head=y-10;
+  const cut=newOutfits[skin-12]?.[1]||vintageCuts[skin], color=colors[skin];
+  const r=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x,y,w,h)};
+  g.clearRect(0,0,canvas.width,canvas.height);
+  // Boots and legs stay on the same ground line for tall and short avatars.
+  for(const foot of [x+2,x+w-6]){r(foot,hip-1,4,legs,ink);r(foot-1,base-2,6,2,'#5e463b')}
+  r(cx-5,head,10,10,tone);r(cx-6,head+4,12,3,tone);
+  r(cx-5,head-2,10,4,hairColor);r(cx-5,head+1,2,4,hairColor);
+  r(cx-2,head+4,1,2,ink);r(cx+3,head+4,1,2,ink);r(cx,head+8,3,1,'#915e53');
+  if(['braids','witch','bandana'].includes(hair))for(const dx of [-6,5])r(cx+dx,head+2,2,10,hairColor);
+  if(['beard','strawbeard','sage'].includes(hair)){r(cx-4,head+8,9,3,hairColor);r(cx-2,head+11,5,2,hairColor)}
+  if(['straw','strawbeard'].includes(hair)){r(cx-9,head-1,19,2,'#ad7b41');r(cx-5,head-4,11,3,'#e2bd6f');r(cx-4,head-5,8,1,'#eacc8b')}
+  if(hair==='sage'||hair==='witch'){for(let i=0;i<6;i++)r(cx-5+i,head-2-i,11-i*2,1,'#685274');r(cx-8,head-1,17,2,'#886885')}
+  if(hair==='glasses'||hair==='bun'){r(cx-4,head+3,4,3,'#414354');r(cx+1,head+3,4,3,'#414354');r(cx,head+4,1,1,ink);r(cx-3,head+4,2,1,'#bdc5be');r(cx+2,head+4,2,1,'#bdc5be')}
+  if(hair==='bun')r(cx-6,head-5,6,5,hairColor);
+  if(hair==='curls')for(const [dx,dy] of [[-6,0],[-5,-3],[-1,-4],[3,-3],[5,0]])r(cx+dx,head+dy,4,4,hairColor);
+  if(hair==='cap'||hair==='bandana'){r(cx-5,head-2,11,4,hair==='cap'?'#46747a':'#ae584e');r(cx+(hair==='cap'?4:-8),head+1,5,2,hair==='cap'?'#355d60':'#963f3b')}
+  r(x,y,w,body,ink);r(x+1,y+1,w-2,body-2,color);
+  for(const arm of [x-2,x+w-1]){r(arm,y+2,4,body-6,color);r(arm,y+body-4,3,4,tone)}
+  if(cut==='armor'){r(x-3,y,6,4,'#9da5b4');r(x+w-3,y,6,4,'#9da5b4');for(let i=4;i<body-2;i+=4)r(x+2,y+i,w-4,1,white)}
+  if(cut==='hood'){r(cx-6,head,2,9,color);r(cx+5,head,2,9,color);r(cx-5,head-2,10,2,color);r(cx-3,y+2,1,5,white);r(cx+2,y+2,1,5,white);r(cx-3,hip-5,7,2,ink)}
+  if(cut==='tie'){r(cx-4,y,8,2,white);r(cx,y+2,2,6,'#9c4c4b');r(x,hip-4,w,3,'#49556b')}
+  if(cut==='jacket'){r(cx-2,y+1,4,body-2,white);r(cx+3,y+4,3,2,ink)}
+  if(['dress','batik','robe'].includes(cut)){r(x-2,hip-5,w+4,7,color);r(x-2,hip+1,w+4,2,white);
+    if(cut==='robe'){for(let j=0;j<6;j++)r(cx-3+j,y+j,2,1,white);r(x,y+8,w,2,ink)}
+    else for(let j=3;j<body;j+=5)for(let i=2;i<w-1;i+=5){r(x+i,y+j,2,2,white);r(x+i+1,y+j-1,1,1,cut==='batik'?ink:'#e9aa90')}
   }
+  if(cut==='helmet'){r(cx-6,head-2,13,2,color);r(cx-6,head,2,9,color);r(cx+5,head,2,9,color);r(x+2,y+5,5,4,'#687386')}
+  if(cut==='sport'){r(x,y,w,2,white);r(cx-1,y+5,4,1,white);r(cx+2,y+6,1,4,white)}
+  if(cut==='hat'){r(x,y+2,w,2,'#785d50');r(cx,y+3,2,6,white);r(x-1,hip-2,w+2,3,color)}
   if(!gear)return;
-  const palette={a:['#b4d6df','#a7c9ec','#7cc5cc','#51475f'][((gear-1)%4)],b:'#f4d079',c:'#977455'};
-  items[gear][1].split('/').forEach((row,y)=>[...row].forEach((pixel,x)=>{
-    if(pixel!=='.')rect(18+x,11+y,1,1,palette[pixel]);
-  }));
+  const palette={a:['#b4d6df','#a7c9ec','#7cc5cc','#51475f'][(gear-1)%4],b:'#f4d079',c:'#977455'};
+  const pixels=items[gear][1].split('/');
+  pixels.forEach((row,j)=>[...row].forEach((p,i)=>{if(p!=='.')r(x+w+i,hip-2-pixels.length+j,1,1,palette[p])}));
 }
 const emblems={Perunggu:'⬟',Perak:'✦',Emas:'★',Safir:'◆',Master:'♛'};
 function rankBadge(rank='Perunggu'){

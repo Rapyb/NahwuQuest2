@@ -5,7 +5,7 @@ let user=null,pos=64;
 function message(s,bad=false){const el=$('notice');if(el){el.textContent=s;el.className=bad?'warn notice':'success notice'}}
 function btn(label,action,cls=''){const b=document.createElement('button');b.type='button';b.textContent=label;b.className=cls;b.onclick=action;return b}
 function heading(tag,s){const h=document.createElement(tag);h.textContent=s;return h}
-function portrait(i,gear=user?.gear||0){const c=document.createElement('canvas');c.width=26;c.height=26;drawEquipment(c,i,gear);return c}
+function portrait(i,gear=user?.gear||0,character=user?.character||0){const c=document.createElement('canvas');c.width=42;c.height=48;drawEquipment(c,i,gear,character);return c}
 function show(title){panel.replaceChildren();let h=heading('h2',title);h.id='dialogTitle';panel.append(h);if(!dialog.open)dialog.showModal();dialog.scrollTop=0}
 function view(){const route=location.hash.slice(1);return user&&(route!=='studio'||isTeacher)&&Object.hasOwn(menu,route)?route:'home'}
 function go(key){if(location.hash==='#'+key)render();else location.hash=key}
@@ -18,19 +18,35 @@ function home(){main.innerHTML='<section class="homeHero"><div><span class="labe
  if(isTeacher)area.append(btn('Buka Studio Guru',()=>go('studio')));
  side.append(heading('h2','Lanjutkan quest'));const id=Object.keys(user.steps).map(Number).find(i=>user.steps[i]>0)??lessons.findIndex((a,i)=>a&&!user.done.includes(i));if(id>=0)side.append(heading('p',lessons[id][0]+' · '+worlds.find(w=>w.quests.some(q=>q.id===id)).title),btn('Buka quest',()=>lesson(id)));else if(!worlds.some(w=>w.quests.length))side.append(heading('p','Belum ada quest yang tersedia.'));else side.append(heading('p','Semua quest telah selesai. Kamu bisa mengulang latihan melalui jurnal.'))}
 function karakter(){main.innerHTML='<span class="label">PROFIL PEMAIN</span><h1>Tampilan Karakter</h1><div class="twocol"><section class="bigSkin" id="look"></section><section class="box"><h2>Nama karakter</h2><p>Nama ini tampil di atas karaktermu saat menjelajah.</p><form id="rename"><label>Nama panggilan<br><input id="newName" required maxlength="24"></label><button class="gold">Simpan nama</button></form></section></div>';
- $('look').append(portrait(user.skin),heading('h2',user.name),heading('p',outfits[user.skin]),heading('p',items[user.gear||0][0]),rankBadge(user.arenaRank),heading('small',(user.arenaRP||0)+' RP'),btn('Peringkat Global',()=>go('global')),btn('Ganti perlengkapan',()=>go('skin')));$('newName').value=user.name;
+ $('look').append(portrait(user.skin),heading('h2',user.name),heading('p',characters[user.character||0].slice(0,2).join(' · ')),heading('p',outfits[user.skin]),heading('p',items[user.gear||0][0]),rankBadge(user.arenaRank),heading('small',(user.arenaRP||0)+' RP'),btn('Peringkat Global',()=>go('global')),btn('Atur penampilan',()=>go('skin')));$('newName').value=user.name;
  $('look').append(heading('small','ID akun · '+user.id));
  $('rename').onsubmit=async e=>{e.preventDefault();if(await save(p=>p.name=$('newName').value.trim())){render();message('Nama karakter berhasil disimpan.')}}}
-function wardrobe(){main.innerHTML='<span class="label">INVENTARIS</span><h1>Perlengkapan</h1><h2>Outfit</h2><p>Pilih pakaian yang sudah terbuka untuk memakainya di semua wilayah.</p><div class="cards" id="skins"></div>';outfits.forEach((s,i)=>{const b=btn('',async()=>{if(await save(p=>{if(gates[i]<=p.done.length)p.skin=i})){render();message('Skin berhasil dipakai.')}},'skinButton');const body=document.createElement('div');body.append(heading('h3',s),heading('small',i===user.skin?'✓ Dipakai':gates[i]>user.done.length?'Terkunci · '+gates[i]+' quest':'Pakai skin'));b.disabled=i===user.skin||gates[i]>user.done.length;b.append(portrait(i),body);$('skins').append(b)})}
 function equipmentView(){
-  wardrobe();
-  main.append(heading('h2','Senjata dan aksesori'),heading('p','Pilih satu benda untuk dibawa saat menjelajah dan berlomba.'));
-  const group=document.createElement('div');group.className='cards';main.append(group);
-  items.forEach(([name],i)=>{
-    const selected=(user.gear||0)===i;
-    const b=btn('',async()=>{if(await save(p=>p.gear=i)){render();message(name+' dipilih.')}},'skinButton');
-    b.disabled=selected;b.append(portrait(user.skin,i),heading('span',name+(selected?' · Dipakai':'')));group.append(b);
-  });
+  main.append(heading('h1','Ruang ganti'));
+  const layout=document.createElement('div');layout.className='twocol';main.append(layout);
+  const preview=document.createElement('section');preview.className='bigSkin';
+  const form=document.createElement('form');form.className='box accountForm';layout.append(preview,form);
+  function selector(label,options,value){
+    const wrap=heading('label',label),select=document.createElement('select');
+    options.forEach(({name,locked},index)=>{
+      const option=new Option(name,index);option.disabled=!!locked;select.add(option);
+    });
+    select.value=value;wrap.append(select);form.append(wrap);select.onchange=draw;return select;
+  }
+  const character=selector('Karakter',characters.map(([name,role,gender])=>({name:name+' · '+role+' · '+gender})),user.character||0);
+  const outfit=selector('Outfit',outfits.map((name,i)=>({name:gates[i]>user.done.length?name+' · '+gates[i]+' quest':name,locked:gates[i]>user.done.length})),user.skin);
+  const item=selector('Benda genggam',items.map(([name])=>({name})),user.gear||0);
+  const submit=document.createElement('button');submit.className='gold';submit.textContent='Simpan kombinasi';form.append(submit);
+  function draw(){
+    const [name,role]=characters[character.value];
+    preview.replaceChildren(portrait(+outfit.value,+item.value,+character.value),heading('h2',name+' · '+role),heading('p',outfits[outfit.value]+' · '+items[item.value][0]));
+  }
+  form.onsubmit=async e=>{
+    e.preventDefault();submit.disabled=true;
+    const combo={character:+character.value,skin:+outfit.value,gear:+item.value};
+    if(await save(p=>Object.assign(p,combo)))message('Kombinasi karakter tersimpan.');
+    submit.disabled=false;
+  };draw();
 }
 function status(i){return user.steps[i]?'Lanjut · soal '+(user.steps[i]+1)+'/'+bank[i].length:user.done.includes(i)?'✓ Selesai · ulangi':bank[i].length+' soal · 50 XP'}
 function questCard(i,j){const b=btn('',()=>lesson(i),'card');b.append(heading('small','POS '+(j+1)),heading('h3',lessons[i][0]),heading('small',status(i)));return b}

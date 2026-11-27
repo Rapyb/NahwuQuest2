@@ -59,6 +59,7 @@ def api(db, data):
     token = data.get("token")
     require(isinstance(token, str) and len(token) == 64 and all(c in "0123456789abcdef" for c in token), "Identitas pemain tidak valid.")
     key = hashlib.sha256(token.encode()).hexdigest()
+    require(not db.execute("SELECT id FROM revoked_arena WHERE id=?", (key,)).fetchone(), "Identitas arena sudah dicabut. Masuk kembali.")
     name = data.get("name")
     require(isinstance(name, str) and 0 < len(name.strip()) <= 24, "Nama pemain tidak valid.")
     db.execute("INSERT INTO players VALUES (?,0,0) ON CONFLICT(id) DO NOTHING", (key,))
@@ -78,7 +79,7 @@ def api(db, data):
     pose = data.get("pose")
     if room and code == data.get("code") and isinstance(pose, dict):
         member = room["members"][key]
-        for field, maximum in (("x",2140), ("jump",10**9), ("skin",29), ("gear",20)):
+        for field, maximum in (("x",2140), ("jump",10**9), ("skin",31), ("gear",24), ("character",11)):
             value = pose.get(field)
             if type(value) is int and 0 <= value <= maximum:
                 member[field] = value
@@ -135,7 +136,7 @@ def api(db, data):
             if q["correct"] == data.get("choice"):
                 p["step"] += 1
                 if p["step"] == 5:
-                    p["place"] = 1 + sum(bool(v["place"]) for k,v in room["members"].items() if k!=key)
+                    p["place"] = 1 + max(room.get("awardedPlaces",0), max(v["place"] for v in room["members"].values()))
                     p["elapsed"] = round(now-room["start"],2)
                     xp, rp = rewards(p["place"])
                     db.execute("UPDATE players SET xp=xp+?,rp=rp+? WHERE id=?", (xp,rp,key))
@@ -159,7 +160,7 @@ def api(db, data):
         marks=",".join("?" for _ in members)
         ranks={pid:rank(points) for pid,points in db.execute(f"SELECT id,rp FROM players WHERE id IN ({marks})",tuple(members))}
         result["room"]=dict(code=code,arenaMap=room.get("arenaMap"),phase=room["phase"],quest=room["quest"],start=room["start"],host=key==next(iter(members)),members=[
-            {**{f:v[f] for f in ("name","ready","step","place","elapsed","left")}, "rank":ranks.get(k,"Perunggu"),"gear":v.get("gear",0),"avatar":k[:16],"x":v.get("x",64),"jump":v.get("jump",0),"skin":v.get("skin",0),"me":k==key,"host":i==0,"reward":rewards(v["place"])} for i,(k,v) in enumerate(members.items())],retry=p.get("retry",0))
+            {**{f:v[f] for f in ("name","ready","step","place","elapsed","left")}, "rank":ranks.get(k,"Perunggu"),"character":v.get("character",0),"gear":v.get("gear",0),"avatar":k[:16],"x":v.get("x",64),"jump":v.get("jump",0),"skin":v.get("skin",0),"me":k==key,"host":i==0,"reward":rewards(v["place"])} for i,(k,v) in enumerate(members.items())],retry=p.get("retry",0))
         if room["phase"]=="race" and now>=room["start"] and not p["place"]:
             q=room["questions"][p["step"]]
             result["room"]["question"]={f:q[f] for f in ("prompt","choices")}

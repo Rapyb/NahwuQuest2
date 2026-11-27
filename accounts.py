@@ -15,6 +15,7 @@ def schema(db):
         "accounts(id TEXT PRIMARY KEY, login TEXT UNIQUE NOT NULL, salt TEXT, digest TEXT, profile TEXT, revision INTEGER)",
         "sessions(digest TEXT PRIMARY KEY, owner TEXT, expires BIGINT)",
         "catalog(id INTEGER PRIMARY KEY, body TEXT, revision INTEGER)",
+        "revoked_arena(id TEXT PRIMARY KEY)",
         "attempts(login TEXT PRIMARY KEY, count INTEGER, since BIGINT)",
     ):
         db.execute("CREATE TABLE IF NOT EXISTS " + definition)
@@ -65,7 +66,8 @@ def valid_profile(p, worlds):
           and isinstance(steps, dict), "Progres quest tidak valid.")
     done = list(dict.fromkeys(done))
     skin = p.get("skin", 0)
-    gates = [0,1,3,6,2,4,5,8,10,12,15,18]+[0]*18
+    gates = [0,1,3,6,2,4,5,8,10,12,15,18]+[0]*20
+    character = p.get("character",0)
     gear = p.get("gear",0)
     visible = active_worlds(worlds)
     active_ids = {q["id"] for w in visible for q in w["quests"]}
@@ -74,9 +76,49 @@ def valid_profile(p, worlds):
     return dict(name=field(p.get("name"), 24), done=done,
                 steps={str(i): n for i in active_ids if type(n := steps.get(str(i))) is int
                        and 0 < n < len(quests[i]["questions"])},
-                gear=gear if type(gear) is int and 0<=gear<=20 else 0,
+                character=character if type(character) is int and 0<=character<12 else 0,
+                gear=gear if type(gear) is int and 0<=gear<=24 else 0,
                 skin=skin if type(skin) is int and 0 <= skin < len(gates) and gates[skin] <= len(done) else 0,
                 world=world, worldKey=visible[world]["key"] if visible else None)
+
+
+def delete_player(db, target, login):
+    check(isinstance(target,str) and not teacher(target), "Hanya akun pemain yang dapat dihapus.")
+    row=db.execute("SELECT login,profile FROM accounts WHERE id=?", (target,)).fetchone()
+    check(row and row[0]==login, "Nama pengguna konfirmasi tidak sesuai atau akun sudah dihapus.")
+    old_token=json.loads(row[1])["arenaToken"]
+    key=token_hash(old_token)
+    db.execute("DELETE FROM sessions WHERE owner=?", (target,))
+    db.execute("DELETE FROM attempts WHERE login=?", (login,))
+    db.execute("DELETE FROM accounts WHERE id=?", (target,))
+    db.execute("INSERT INTO revoked_arena VALUES (?) ON CONFLICT(id) DO NOTHING", (key,))
+    # Some older imports shared an arena identity. Keep the surviving accounts' scores.
+    replacement=secrets.token_hex(32)
+    shared=False
+    for ident,raw in db.execute("SELECT id,profile FROM accounts").fetchall():
+        profile=json.loads(raw)
+        if profile["arenaToken"]==old_token:
+            shared=True
+            profile["arenaToken"]=replacement
+            db.execute("UPDATE accounts SET profile=?,revision=revision+1 WHERE id=?",(json.dumps(profile),ident))
+    if shared:
+        db.execute("UPDATE players SET id=? WHERE id=?", (token_hash(replacement),key))
+    else:
+        db.execute("DELETE FROM players WHERE id=?", (key,))
+    for code,raw in db.execute("SELECT code,body FROM rooms").fetchall():
+        room=json.loads(raw)
+        if key not in room["members"]:
+            continue
+        departed=room["members"].pop(key)
+        if shared:
+            room["members"][token_hash(replacement)]=departed
+        else:
+            room["awardedPlaces"]=max(room.get("awardedPlaces",0),departed["place"])
+        if room["members"]:
+            db.execute("UPDATE rooms SET body=? WHERE code=?", (json.dumps(room),code))
+        else:
+            db.execute("DELETE FROM rooms WHERE code=?", (code,))
+    return {"ok":True}
 
 
 def account_action(db, data):
@@ -96,6 +138,8 @@ def account_action(db, data):
             p = valid_profile(imported, catalog(db)[0])
             arena = imported.get("arenaToken")
             p["arenaToken"] = arena if isinstance(arena,str) and re.fullmatch("[a-f0-9]{64}", arena) else secrets.token_hex(32)
+            if db.execute("SELECT id FROM revoked_arena WHERE id=?", (token_hash(p["arenaToken"]),)).fetchone():
+                p["arenaToken"]=secrets.token_hex(32)
             digest = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt), 600000).hex()
             db.execute("INSERT INTO accounts VALUES (?,?,?,?,?,0)", (owner,login,salt,digest,json.dumps(p)))
         else:
@@ -121,6 +165,13 @@ def account_action(db, data):
     if action == "logout":
         db.execute("DELETE FROM sessions WHERE digest=?", (token_hash(session),))
         return {"ok":True}
+    if action in ("listPlayers","deletePlayer"):
+        check(teacher(owner), "Hanya guru yang dapat mengelola akun.")
+        if action=="deletePlayer":
+            return delete_player(db,data.get("target"),data.get("confirmation"))
+        return {"players":[dict(id=ident,login=login,name=json.loads(raw)["name"])
+                           for ident,login,raw in db.execute("SELECT id,login,profile FROM accounts ORDER BY login")
+                           if not teacher(ident)]}
     if action == "leaderboard":
         from server import rank
         offset=data.get("offset",0)

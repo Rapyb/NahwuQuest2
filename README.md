@@ -50,3 +50,8 @@ Pada Lobi Multiplayer, pembuat ruangan memilih map serta jenis balapan sebelum m
 Di Studio Guru, gunakan **Hapus quest** di samping judul quest lalu konfirmasi. Map tetap dapat dimainkan dan XP penyelesaian terdahulu tetap tercatat. Di **Perlengkapan** pemain dapat memilih kombinasi outfit dan satu item genggam. Ada 18 outfit tambahan dan 20 item kosmetik, tersedia sejak awal. Pilihan disimpan per akun dan terlihat di profil, Atlas, serta arena. Item tidak mengubah aturan balapan.
 
 Menu **Peringkat Global** menampilkan semua akun pada database deployment, 25 pemain per halaman, diurutkan dari RP arena tertinggi. RP sama menghasilkan posisi yang sama. Posisi akun sendiri ditampilkan di atas daftar. Simbol rank muncul di profil dan lobi multiplayer.
+
+## Ruang ganti dan pengelolaan akun
+Pilih **Perlengkapan** atau **Karakter → Atur penampilan**. Padukan satu karakter dasar, satu outfit, serta satu benda genggam (termasuk tangan kosong). Pratinjau berubah saat opsi dipilih. Klik **Simpan kombinasi** untuk menerapkan semuanya. Akun lama menggunakan karakter dasar Raka dan mempertahankan pilihan outfit dan item sebelumnya.
+
+Di **Studio Guru → Kelola akun pemain**, cari nama pengguna atau nama karakter, pilih **Hapus akun**, ketik nama pengguna yang ditampilkan, lalu konfirmasi. Akun siswa, sesi masuk, progres, dan peringkat akun tersebut dihapus. Akun guru dikecualikan. Data pemain lain dan materi kelas tetap tersedia.
