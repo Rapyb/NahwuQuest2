@@ -33,6 +33,7 @@ QUESTS = {
         ("Pilih fi‘il amr.", "اُكْتُبْ", "كَتَبَ", "يَكْتُبُ"),
     ],
 }
+RACE_STOPS = (214, 642, 1070, 1498, 1926)
 TIERS = [(0, "Perunggu"), (60, "Perak"), (150, "Emas"), (300, "Safir"), (600, "Master")]
 def rank(points):
     return next(name for threshold, name in reversed(TIERS) if points >= threshold)
@@ -74,6 +75,13 @@ def api(db, data):
     code = next((c for c,r in rooms.items() if key in r["members"] and not r["members"][key]["left"]), None)
     room = rooms.get(code)
     action = data.get("action")
+    pose = data.get("pose")
+    if room and code == data.get("code") and isinstance(pose, dict):
+        member = room["members"][key]
+        for field, maximum in (("x",2140), ("jump",10**9), ("skin",11)):
+            value = pose.get(field)
+            if type(value) is int and 0 <= value <= maximum:
+                member[field] = value
     if action in ("create","join"):
         require(not room, "Keluar dari ruangan saat ini terlebih dahulu.")
         if action == "create":
@@ -105,6 +113,8 @@ def api(db, data):
             members = room["members"]
             require(room["phase"] == "waiting" and key == next(iter(members)) and len(members)>=2 and all(v["ready"] for v in members.values()), "Minimal dua pemain dan semua harus siap.")
             room.update(phase="race",start=now+4,questions=[])
+            for member in members.values():
+                member["x"] = 64
             for prompt,correct,*others in random.sample(QUESTS[room["quest"]],5):
                 choices=[correct,*others]
                 random.shuffle(choices)
@@ -113,6 +123,7 @@ def api(db, data):
             require(room["phase"] == "race" and now >= room["start"] and not p["place"], "Lomba belum aktif atau sudah selesai.")
             require(p["step"] == data.get("step"), "Progres soal sudah berubah.")
             require(now >= p.get("retry",0), "Tunggu sebentar sebelum menjawab lagi.")
+            require(abs(p.get("x",64)-RACE_STOPS[p["step"]]) <= 76, "Dekati pos soal terlebih dahulu.")
             q = room["questions"][p["step"]]
             if q["correct"] == data.get("choice"):
                 p["step"] += 1
@@ -139,7 +150,7 @@ def api(db, data):
         members=room["members"]
         p=members[key]
         result["room"]=dict(code=code,phase=room["phase"],quest=room["quest"],start=room["start"],host=key==next(iter(members)),members=[
-            {**{f:v[f] for f in ("name","ready","step","place","elapsed","left")}, "me":k==key,"host":i==0,"reward":rewards(v["place"])} for i,(k,v) in enumerate(members.items())],retry=p.get("retry",0))
+            {**{f:v[f] for f in ("name","ready","step","place","elapsed","left")}, "avatar":k[:16],"x":v.get("x",64),"jump":v.get("jump",0),"skin":v.get("skin",0),"me":k==key,"host":i==0,"reward":rewards(v["place"])} for i,(k,v) in enumerate(members.items())],retry=p.get("retry",0))
         if room["phase"]=="race" and now>=room["start"] and not p["place"]:
             q=room["questions"][p["step"]]
             result["room"]["question"]={f:q[f] for f in ("prompt","choices")}

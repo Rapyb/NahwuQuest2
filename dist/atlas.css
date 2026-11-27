@@ -9,3 +9,16 @@
 .accountForm input[type=checkbox]{width:auto}.accountForm button{justify-self:start}
 .accountForm fieldset{min-width:0;border:1px solid #706378;border-radius:8px;margin:1rem 0;padding:1rem}
 .editorSection{margin:1rem 0}.editorList{margin-top:.7rem;display:flex;flex-wrap:wrap;gap:.4rem}
+
+.trailView{position:relative;overflow:hidden;height:clamp(320px,58vh,620px);border:2px solid #76614f;border-radius:14px;background:#bc9788;isolation:isolate}
+.trailStage{position:relative;height:100%;background-repeat:repeat-x;background-size:auto 100%;image-rendering:pixelated}
+.trailSite{position:absolute;bottom:15%;transform:translateX(-50%);display:grid;justify-items:center;background:none!important;border:0!important;padding:0;box-shadow:none!important}
+.trailSite canvas{width:clamp(144px,20vw,210px);height:auto;image-rendering:pixelated}
+.trailSite span,.trailActor small{color:#ffedc6;background:#292435ed;border:1px solid #ac9879;padding:3px 8px;border-radius:4px;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+.trailSite.goal span{background:#ffd681;color:#302337}.trailActor{pointer-events:none;position:absolute;bottom:15%;display:grid;justify-items:center;transform:translateX(-50%);transition:left .36s linear;z-index:2}
+.trailActor.mine{transition:none;z-index:3}.trailActor canvas{height:64px;width:54px;image-rendering:pixelated}
+.trailActor.walking canvas{animation:trailStep .23s infinite alternate steps(2)}@keyframes trailStep{to{translate:0 -4px;rotate:3deg}}
+.trailControls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.trailControls button{touch-action:none;user-select:none;min-height:44px}
+.venueBanner{position:relative;overflow:hidden;border-radius:8px;margin:0 0 12px}
+.venueBanner canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
+.venueBanner span{position:absolute;bottom:4px;left:6px;background:#302636e8;color:#fff3d3;padding:3px 8px;border-radius:5px;font-size:.8rem}

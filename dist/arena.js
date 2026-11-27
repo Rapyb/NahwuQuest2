@@ -8,6 +8,9 @@ function arenaView() {
   const run = arenaRun;
   const questNames = {"i'rab":"Sprint I‘rāb", jumlah:"Reli Susun Kalimat"};
   main.innerHTML = '<section class="arenaBanner"><div><span class="label">MULTIPLAYER · QUEST RANKED</span><h1>Arena Nahwu</h1><p>Selesaikan lima soal dengan benar. Pemain pertama yang finis memenangkan balapan.</p></div><div class="arenaRank" id="arenaRank">Memuat rank…</div></section><p id="arenaNotice" role="status"></p><div id="arenaBody"></div>';
+  const mapHost=document.createElement('section');
+  $('arenaBody').before(mapHost);
+  let trail=null, mapKey='', opened=-1, modalState='', latest;
   const area = $('arenaBody'), notice = $('arenaNotice');
   const token = user.arenaToken;
   let current, last = '', busy = false, quest = "i'rab", inputCode = '';
@@ -28,7 +31,7 @@ function arenaView() {
     busy = true;
     try {
       const response = await fetch(window.NAHWU_ARENA_URL,{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({action,token,name:user.name,code:current?.code,...fields}),signal:AbortSignal.timeout(8000)});
+        body:JSON.stringify({action,token,name:user.name,code:current?.code,pose:trail?.pose(),...fields}),signal:AbortSignal.timeout(8000)});
       if (!response.headers.get('content-type')?.includes('application/json')) throw Error('API arena belum terhubung. Periksa alamat backend pada konfigurasi deployment.');
       const data = await response.json();
       if (run !== arenaRun) return;
@@ -50,7 +53,7 @@ function arenaView() {
       if (action==='state') notice.dataset.connection='1';
     } finally {
       busy = false;
-      if (run===arenaRun) arenaTimer=setTimeout(()=>update(),current?.phase==='race'?450:1600);
+      if (run===arenaRun) arenaTimer=setTimeout(()=>update(),current?500:1600);
     }
   }
   function draw(data) {
@@ -58,7 +61,24 @@ function arenaView() {
     const remaining=r?Math.max(0,Math.ceil(r.start+180-data.now)):0;
     const count=r?Math.max(0,Math.ceil(r.start-data.now)):0;
     const retry=r?Math.max(0,Math.ceil(r.retry-data.now)):0;
-    const signature=JSON.stringify(r?[r,count,retry]:data.rooms);
+    latest=data;
+    const mapId=r?r.code+'-'+r.phase:'';
+    if(mapId!==mapKey){
+      mapKey=mapId;trail?.destroy();trail=null;mapHost.replaceChildren();opened=-1;
+      if(dialog.open)dialog.close();
+      if(r && r.phase!=='result'){
+        const me=r.members.find(p=>p.me);
+        mapHost.append(heading('h2',r.quest==='jumlah'?'Lintasan kebun kurma':'Lintasan desa kitab'),
+          heading('p','← → untuk berjalan, ↑ untuk lompat. Saat balapan, kunjungi lima lokasi sesuai urutan dan tekan E atau Masuk.'));
+        trail=explore(mapHost,{name:r.code,theme:r.quest==='jumlah'?3:0,skin:user.skin,initial:me.x,
+          stops:Array.from({length:5},(_,i)=>'Pos '+(i+1)+' · '+sites[i%3]),
+          allowed:i=>current?.phase==='race'&&!!current?.question&&current.members.find(p=>p.me).step===i,
+          enter:i=>{opened=i;modalState='';arenaQuestion()}});
+      }
+    }
+    if(trail){trail.sync(r.members);trail.mark(r.phase==='race'?r.members.find(p=>p.me).step:-1)}
+    if(opened>=0)arenaQuestion();
+    const signature=JSON.stringify(r?[{...r,members:r.members.map(({x,jump,skin,...m})=>m)},count,retry]:data.rooms);
     const clock=$('arenaClock');
     if(clock) clock.textContent='Sisa waktu '+remaining+' detik';
     if(last===signature) return;
@@ -101,11 +121,9 @@ function arenaView() {
       if(me.place) box.append(heading('p','Waktu finis '+me.elapsed.toFixed(2)+' detik'));
     } else if(r.question) {
       const time=heading('small','Sisa waktu '+remaining+' detik');time.id='arenaClock';
-      box.append(heading('p','Soal '+(me.step+1)+' dari 5'),time,heading('h3',r.question.prompt));
-      r.question.choices.forEach((choice,i)=>{
-        const b=btn(choice,()=>update('answer',{step:me.step,choice:i}),'roomLink');b.disabled=retry>0;box.append(b);
-      });
-      if(retry) box.append(heading('p','Belum tepat. Coba lagi dalam '+retry+' detik.'));
+      box.append(heading('p','Tujuan · '+sites[me.step%3]+' (pos '+(me.step+1)+' dari 5)'),time,
+        btn('Jalan ke pos soal',()=>trail.goto(me.step)));
+
     }
     const sorted=[...r.members].sort((a,b)=>(a.place||9)-(b.place||9)||b.step-a.step);
     for(const p of sorted) {
@@ -116,6 +134,23 @@ function arenaView() {
     board.append(btn(r.phase==='waiting'?'Keluar ruangan':'Kembali ke lobi',()=>{
       if(r.phase!=='race'||me.place||window.confirm('Keluar sekarang akan mengakhiri balapanmu tanpa hadiah.')) update('leave');
     }));
+  }
+  function arenaQuestion(){
+    const r=latest.room, me=r?.members.find(p=>p.me);
+    if(!r?.question||me?.step!==opened||r.phase!=='race'){
+      opened=-1;if(dialog.open)dialog.close();return;
+    }
+    const retry=Math.max(0,Math.ceil(r.retry-latest.now));
+    const state=opened+'-'+retry;
+    if(state===modalState){if(!dialog.open)opened=-1;return}
+    modalState=state;
+    show(sites[opened%3]+' · Soal '+(opened+1));
+    panel.append(venueBanner(opened%3),heading('h3',r.question.prompt));
+    const choices=document.createElement('div');choices.className='choices';panel.append(choices);
+    r.question.choices.forEach((choice,i)=>{
+      const button=btn(choice,()=>{update('answer',{step:me.step,choice:i})});button.disabled=retry>0;choices.append(button);
+    });
+    if(retry)panel.append(heading('p','Belum tepat. Coba lagi dalam '+retry+' detik.'));
   }
   update();
 }
