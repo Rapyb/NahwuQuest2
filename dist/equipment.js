@@ -36,21 +36,35 @@ const accessoryGates=[0,2,4,6,8,1,3,5,7,9,11,14,18];
 // Shared pixel grid keeps feet, sleeves and held items aligned on every body shape.
 const characters=[
   ['Raka','Petualang','Laki-laki',14,17,9,'crop','#d29870','#403341'],
-  ['Sari','Petani','Perempuan',15,15,8,'straw','#bd815d','#533733'],
-  ['Bayu','Petani','Laki-laki',19,15,7,'strawbeard','#a66d51','#413331'],
+  ['Sari','Petani','Perempuan',15,15,8,'bob','#bd815d','#533733'],
+  ['Bayu','Petani','Laki-laki',19,15,7,'waves','#a66d51','#413331'],
   ['Nisa','Siswi','Perempuan',11,13,7,'braids','#e4aa83','#43333c'],
-  ['Arif','Siswa','Laki-laki',11,15,9,'glasses','#bc8461','#3a3341'],
-  ['Laras','Penyihir','Perempuan',11,18,11,'witch','#d59677','#744f69'],
-  ['Damar','Penyihir','Laki-laki',16,16,8,'sage','#ad795a','#ded4c0'],
-  ['Ayu','Pelaut','Perempuan',13,17,10,'bandana','#ab7052','#483246'],
-  ['Bima','Pandai besi','Laki-laki',20,17,8,'beard','#b37b60','#533e34'],
+  ['Arif','Siswa','Laki-laki',11,15,9,'sidePart','#bc8461','#3a3341'],
+  ['Laras','Penyihir','Perempuan',11,18,11,'long','#d59677','#744f69'],
+  ['Damar','Penyihir','Laki-laki',16,16,8,'swept','#ad795a','#ded4c0'],
+  ['Ayu','Pelaut','Perempuan',13,17,10,'sideBraid','#ab7052','#483246'],
+  ['Bima','Pandai besi','Laki-laki',20,17,8,'buzz','#b37b60','#533e34'],
   ['Ratih','Pustakawan','Perempuan',13,16,9,'bun','#d59a72','#553c37'],
-  ['Fajar','Kurir','Laki-laki',11,17,11,'cap','#c38569','#473a32'],
+  ['Fajar','Kurir','Laki-laki',11,17,11,'quiff','#c38569','#473a32'],
   ['Intan','Perajin','Perempuan',17,14,7,'curls','#9c664c','#392d32']
 ];
 const vintageCuts=['jacket','robe','robe','armor','sport','tie','jacket','hood','robe','jacket','robe','sport'];
 const vintageNames=['Rompi desa','Jubah senja','Kaftan emas','Zirah oasis','Kemeja kebun','Blus pelaut','Jas juru tulis','Tunik giok','Mantel astronom','Jaket mercusuar','Jubah ahli nahwu','Jersey bintang'];
 outfits.splice(0,12,...vintageNames);
+const haircuts = {
+  crop: [[-5,-2,10,4],[-5,1,2,3],[-3,-3,6,1]],
+  bob: [[-5,-3,10,4],[-6,-1,3,10],[4,-1,3,10],[-6,8,4,2],[3,8,4,2],[-4,0,8,2]],
+  waves: [[-6,-2,12,4],[-5,-4,4,3],[-1,-3,4,2],[2,-4,3,3],[-6,1,2,4],[3,1,3,2]],
+  braids: [[-5,-3,10,4],[-5,0,3,3],[3,0,3,3],[-7,2,3,4],[-8,5,3,4],[-7,8,3,4],[5,2,3,4],[6,5,3,4],[5,8,3,4]],
+  sidePart: [[-5,-2,11,3],[-5,0,6,2],[-5,2,3,2],[3,-3,2,2],[4,0,2,4]],
+  long: [[-5,-3,10,4],[-7,-1,3,15],[4,-1,3,15],[-8,11,3,5],[5,12,3,5],[-4,0,4,2]],
+  swept: [[-5,-2,12,3],[-3,-4,9,2],[1,-5,6,2],[-6,0,4,3],[-6,2,2,4]],
+  sideBraid: [[-5,-2,11,3],[-5,0,5,2],[-7,1,4,5],[-8,5,4,4],[-9,8,4,4],[-8,11,4,4],[-9,14,3,3],[-8,17,2,2]],
+  buzz: [[-5,-1,10,2],[-4,-2,8,1],[-5,1,1,2],[4,1,1,2]],
+  bun: [[-5,-2,11,4],[-4,-5,7,4],[-3,-6,5,2],[-6,0,2,5],[4,1,2,5]],
+  quiff: [[-5,-2,11,4],[-2,-4,7,3],[1,-6,4,3],[-5,1,2,3]],
+  curls: [[-6,-2,12,4],[-7,-1,3,4],[-5,-4,4,4],[-1,-5,4,4],[3,-4,3,4],[5,0,3,4],[-6,2,2,3]]
+};
 function drawEquipment(canvas,skin,gear,character=0,accessory=0,frame=0){
   const [, , ,w,body,legs,hair,tone,hairColor]=characters[character]||characters[0];
   const g=canvas.getContext('2d'),ink='#382f3d',white='#f1dfbf',cx=36,base=54;
@@ -61,16 +75,11 @@ function drawEquipment(canvas,skin,gear,character=0,accessory=0,frame=0){
   // Boots and legs stay on the same ground line for tall and short avatars.
   for(const foot of [x+2,x+w-6]){r(foot,hip-1,4,legs,ink);r(foot-1,base-2,6,2,'#5e463b')}
   r(cx-5,head,10,10,tone);r(cx-6,head+4,12,3,tone);
-  r(cx-5,head-2,10,4,hairColor);r(cx-5,head+1,2,4,hairColor);
+  // Hair coordinates are relative to the head, so every cut follows its body.
+  for(const [dx,dy,width,height] of haircuts[hair]){
+    r(cx+dx,head+dy,width,height,hairColor);
+  }
   r(cx-2,head+4,1,2,ink);r(cx+3,head+4,1,2,ink);r(cx,head+8,3,1,'#915e53');
-  if(['braids','witch','bandana'].includes(hair))for(const dx of [-6,5])r(cx+dx,head+2,2,10,hairColor);
-  if(['beard','strawbeard','sage'].includes(hair)){r(cx-4,head+8,9,3,hairColor);r(cx-2,head+11,5,2,hairColor)}
-  if(['straw','strawbeard'].includes(hair)){r(cx-9,head-1,19,2,'#ad7b41');r(cx-5,head-4,11,3,'#e2bd6f');r(cx-4,head-5,8,1,'#eacc8b')}
-  if(hair==='sage'||hair==='witch'){for(let i=0;i<6;i++)r(cx-5+i,head-2-i,11-i*2,1,'#685274');r(cx-8,head-1,17,2,'#886885')}
-  if(hair==='glasses'||hair==='bun'){r(cx-4,head+3,4,3,'#414354');r(cx+1,head+3,4,3,'#414354');r(cx,head+4,1,1,ink);r(cx-3,head+4,2,1,'#bdc5be');r(cx+2,head+4,2,1,'#bdc5be')}
-  if(hair==='bun')r(cx-6,head-5,6,5,hairColor);
-  if(hair==='curls')for(const [dx,dy] of [[-6,0],[-5,-3],[-1,-4],[3,-3],[5,0]])r(cx+dx,head+dy,4,4,hairColor);
-  if(hair==='cap'||hair==='bandana'){r(cx-5,head-2,11,4,hair==='cap'?'#46747a':'#ae584e');r(cx+(hair==='cap'?4:-8),head+1,5,2,hair==='cap'?'#355d60':'#963f3b')}
   r(x,y,w,body,ink);r(x+1,y+1,w-2,body-2,color);
   for(const arm of [x-2,x+w-1]){r(arm,y+2,4,body-6,color);r(arm,y+body-4,3,4,tone)}
   if(cut==='armor'){r(x-3,y,6,4,'#9da5b4');r(x+w-3,y,6,4,'#9da5b4');for(let i=4;i<body-2;i+=4)r(x+2,y+i,w-4,1,white)}
@@ -84,17 +93,6 @@ function drawEquipment(canvas,skin,gear,character=0,accessory=0,frame=0){
   if(cut==='helmet'){r(cx-6,head-2,13,2,color);r(cx-6,head,2,9,color);r(cx+5,head,2,9,color);r(x+2,y+5,5,4,'#687386')}
   if(cut==='sport'){r(x,y,w,2,white);r(cx-1,y+5,4,1,white);r(cx+2,y+6,1,4,white)}
   if(cut==='hat'){r(x,y+2,w,2,'#785d50');r(cx,y+3,2,6,white);r(x-1,hip-2,w+2,3,color)}
-  if(hair==='bandana'){ // Ayu: side braid, coral ties and a knotted sailor scarf.
-    for(let i=0;i<5;i++){const bx=cx-10+(i%2);r(bx,head+5+i*3,5,4,hairColor);r(bx+1,head+6+i*3,2,1,'#7c5862')}
-    r(cx-9,head+19,4,2,'#f1a17e');r(cx-8,head+21,2,2,hairColor);
-    r(cx-9,head,4,3,'#eb896c');r(cx-12,head+2,4,2,'#c66658');r(cx-4,y,8,2,'#d36e60');r(cx+1,y+2,3,4,'#eb896c');
-  }
-  if(hair==='bun'){ // Ratih: low chignon, gold hairpin and a loose face-framing lock.
-    r(cx-11,head-2,6,7,hairColor);r(cx-12,head,7,4,hairColor);
-    r(cx-10,head,4,2,'#855d50');r(cx-12,head-3,7,1,'#f1c877');
-    r(cx-13,head-4,2,3,'#e6a8ab');r(cx+4,head+1,3,9,hairColor);r(cx+5,head+9,3,3,hairColor);
-    r(cx-6,head+8,2,2,'#f1c877');
-  }
   if(accessory===1){ // Necklace with an amber pendant
     r(cx-4,y,2,2,white);r(cx+3,y,2,2,white);r(cx-2,y+2,5,1,white);r(cx,y+3,2,3,'#efac42');
   }
