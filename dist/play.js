@@ -5,7 +5,7 @@ let user=null,pos=64;
 function message(s,bad=false){const el=$('notice');if(el){el.textContent=s;el.className=bad?'warn notice':'success notice'}}
 function btn(label,action,cls=''){const b=document.createElement('button');b.type='button';b.textContent=label;b.className=cls;b.onclick=action;return b}
 function heading(tag,s){const h=document.createElement(tag);h.textContent=s;return h}
-function portrait(i,gear=user?.gear||0,character=user?.character||0){const c=document.createElement('canvas');c.width=42;c.height=48;drawEquipment(c,i,gear,character);return c}
+function portrait(i,gear=user?.gear||0,character=user?.character||0,accessory=user?.accessory||0){const c=document.createElement('canvas');c.width=72;c.height=56;drawEquipment(c,i,gear,character,accessory);return c}
 function show(title){panel.replaceChildren();let h=heading('h2',title);h.id='dialogTitle';panel.append(h);if(!dialog.open)dialog.showModal();dialog.scrollTop=0}
 function view(){const route=location.hash.slice(1);return user&&(route!=='studio'||isTeacher)&&Object.hasOwn(menu,route)?route:'home'}
 function go(key){if(location.hash==='#'+key)render();else location.hash=key}
@@ -18,35 +18,61 @@ function home(){main.innerHTML='<section class="homeHero"><div><span class="labe
  if(isTeacher)area.append(btn('Buka Studio Guru',()=>go('studio')));
  side.append(heading('h2','Lanjutkan quest'));const id=Object.keys(user.steps).map(Number).find(i=>user.steps[i]>0)??lessons.findIndex((a,i)=>a&&!user.done.includes(i));if(id>=0)side.append(heading('p',lessons[id][0]+' · '+worlds.find(w=>w.quests.some(q=>q.id===id)).title),btn('Buka quest',()=>lesson(id)));else if(!worlds.some(w=>w.quests.length))side.append(heading('p','Belum ada quest yang tersedia.'));else side.append(heading('p','Semua quest telah selesai. Kamu bisa mengulang latihan melalui jurnal.'))}
 function karakter(){main.innerHTML='<span class="label">PROFIL PEMAIN</span><h1>Tampilan Karakter</h1><div class="twocol"><section class="bigSkin" id="look"></section><section class="box"><h2>Nama karakter</h2><p>Nama ini tampil di atas karaktermu saat menjelajah.</p><form id="rename"><label>Nama panggilan<br><input id="newName" required maxlength="24"></label><button class="gold">Simpan nama</button></form></section></div>';
- $('look').append(portrait(user.skin),heading('h2',user.name),heading('p',characters[user.character||0].slice(0,2).join(' · ')),heading('p',outfits[user.skin]),heading('p',items[user.gear||0][0]),rankBadge(user.arenaRank),heading('small',(user.arenaRP||0)+' RP'),btn('Peringkat Global',()=>go('global')),btn('Atur penampilan',()=>go('skin')));$('newName').value=user.name;
+ $('look').append(portrait(user.skin),heading('h2',user.name),heading('p',characters[user.character||0].slice(0,2).join(' · ')),heading('p',outfits[user.skin]),heading('p',items[user.gear||0][0]+' · '+accessories[user.accessory||0]),rankBadge(user.arenaRank),heading('small',(user.arenaRP||0)+' RP'),btn('Peringkat Global',()=>go('global')),btn('Atur penampilan',()=>go('skin')));$('newName').value=user.name;
  $('look').append(heading('small','ID akun · '+user.id));
  $('rename').onsubmit=async e=>{e.preventDefault();if(await save(p=>p.name=$('newName').value.trim())){render();message('Nama karakter berhasil disimpan.')}}}
+function wardrobeGroups(){
+  return [
+    {key:'character',title:'Karakter',names:characters.map(c=>c[0]),needs:characters.map(()=>0)},
+    {key:'skin',title:'Outfit',names:outfits,needs:gates},
+    {key:'gear',title:'Benda genggam',names:items.map(i=>i[0]),needs:itemGates},
+    {key:'accessory',title:'Aksesori',names:accessories,needs:accessoryGates}
+  ];
+}
 function equipmentView(){
   main.append(heading('h1','Ruang ganti'));
-  const layout=document.createElement('div');layout.className='twocol';main.append(layout);
-  const preview=document.createElement('section');preview.className='bigSkin';
-  const form=document.createElement('form');form.className='box accountForm';layout.append(preview,form);
-  function selector(label,options,value){
-    const wrap=heading('label',label),select=document.createElement('select');
-    options.forEach(({name,locked},index)=>{
-      const option=new Option(name,index);option.disabled=!!locked;select.add(option);
-    });
-    select.value=value;wrap.append(select);form.append(wrap);select.onchange=draw;return select;
+  const groups=wardrobeGroups(), count=user.done.length;
+  const draft=Object.fromEntries(groups.map(({key})=>[key,user[key]||0]));
+  const layout=heading('div',''), preview=heading('section',''), gallery=heading('section','');
+  layout.className='fitting';preview.className='fittingPreview';gallery.className='fittingGallery';
+  const tabs=heading('div',''),grid=heading('div',''),caption=heading('p','');
+  tabs.className='fittingTabs';grid.className='lookGrid';caption.setAttribute('aria-live','polite');
+  const figure=heading('div','');figure.className='lookStage';
+  const name=heading('h2','');
+  const apply=btn('Simpan kombinasi',async()=>{
+    const snapshot={...draft};
+    apply.disabled=true;
+    if(await save(p=>Object.assign(p,snapshot)))message('Penampilan tersimpan.');
+    refreshPreview();
+  },'gold');
+  preview.append(figure,name,caption,apply);gallery.append(tabs,grid);layout.append(preview,gallery);main.append(layout);
+  let current=groups[0];
+  function picture(d){return portrait(d.skin,d.gear,d.character,d.accessory)}
+  function refreshPreview(){
+    figure.replaceChildren(picture(draft));name.textContent=characters[draft.character].slice(0,2).join(' · ');
+    const required=Math.max(...groups.map(g=>g.needs[draft[g.key]]));
+    caption.textContent=[outfits[draft.skin],items[draft.gear][0],accessories[draft.accessory]].join(' · ');
+    apply.disabled=saving||required>count;
+    if(required>count)caption.textContent+=' — Terbuka setelah '+required+' quest ('+count+'/'+required+').';
   }
-  const character=selector('Karakter',characters.map(([name,role,gender])=>({name:name+' · '+role+' · '+gender})),user.character||0);
-  const outfit=selector('Outfit',outfits.map((name,i)=>({name:gates[i]>user.done.length?name+' · '+gates[i]+' quest':name,locked:gates[i]>user.done.length})),user.skin);
-  const item=selector('Benda genggam',items.map(([name])=>({name})),user.gear||0);
-  const submit=document.createElement('button');submit.className='gold';submit.textContent='Simpan kombinasi';form.append(submit);
   function draw(){
-    const [name,role]=characters[character.value];
-    preview.replaceChildren(portrait(+outfit.value,+item.value,+character.value),heading('h2',name+' · '+role),heading('p',outfits[outfit.value]+' · '+items[item.value][0]));
+    refreshPreview();
+    [...tabs.children].forEach((b,i)=>b.setAttribute('aria-pressed',groups[i]===current));
+    grid.replaceChildren();
+    current.names.forEach((label,i)=>{
+      const tile=btn('',()=>{
+        draft[current.key]=i;
+        [...grid.children].forEach((b,j)=>b.setAttribute('aria-pressed',i===j));
+        refreshPreview();
+      },'lookCard');
+      const need=current.needs[i];
+      const detail=current.key==='character'?characters[i][1]:need>count?'🔒 '+need+' quest':'Tersedia';
+      tile.append(picture({...draft,[current.key]:i}),heading('strong',label),heading('small',detail));
+      tile.setAttribute('aria-pressed',i===draft[current.key]);grid.append(tile);
+    });
   }
-  form.onsubmit=async e=>{
-    e.preventDefault();submit.disabled=true;
-    const combo={character:+character.value,skin:+outfit.value,gear:+item.value};
-    if(await save(p=>Object.assign(p,combo)))message('Kombinasi karakter tersimpan.');
-    submit.disabled=false;
-  };draw();
+  groups.forEach(group=>tabs.append(btn(group.title,()=>{current=group;draw()})));
+  draw();
 }
 function status(i){return user.steps[i]?'Lanjut · soal '+(user.steps[i]+1)+'/'+bank[i].length:user.done.includes(i)?'✓ Selesai · ulangi':bank[i].length+' soal · 50 XP'}
 function questCard(i,j){const b=btn('',()=>lesson(i),'card');b.append(heading('small','POS '+(j+1)),heading('h3',lessons[i][0]),heading('small',status(i)));return b}
@@ -70,6 +96,6 @@ function quiz(i){const n=user.steps[i]||0,[q,correct,...rest]=bank[i][n];show(le
  opts.forEach(x=>{let b=btn(x,async()=>{if(x!==correct){b.disabled=true;note.textContent='Belum tepat. '+rest[2]+' Coba lagi.';return}
  const before=user.done.length;if(!await save(p=>{if((p.steps[i]||0)!==n)return;if(n+1<bank[i].length)p.steps[i]=n+1;else{delete p.steps[i];if(!p.done.includes(i))p.done.push(i)}}))return;
  for(const opt of choices.children)opt.disabled=true;note.textContent='Benar! '+rest[2];render();panel.append(btn(n+1<bank[i].length?'Soal berikutnya →':'Lihat hasil →',()=>n+1<bank[i].length?quiz(i):result(i,user.done.length>before),'gold'))});choices.append(b)})}
-function result(i,fresh){show('Quest selesai');panel.append(heading('p',lessons[i][0]+' · '+bank[i].length+' soal selesai.'),heading('h3',fresh?'+50 XP':'Latihan ulang selesai'));let reward=fresh?gates.indexOf(user.done.length):-1;if(reward>=0)panel.append(heading('p','Skin baru terbuka: '+outfits[reward]),btn('Lihat skin',()=>{dialog.close();go('skin')}));panel.append(btn('Kembali',()=>dialog.close(),'gold'))}
+function result(i,fresh){show('Quest selesai');panel.append(heading('p',lessons[i][0]+' · '+bank[i].length+' soal selesai.'),heading('h3',fresh?'+50 XP':'Latihan ulang selesai'));const rewards=fresh?wardrobeGroups().flatMap(group=>group.names.filter((_,i)=>group.needs[i]===user.done.length)):[];if(rewards.length)panel.append(heading('p','Terbuka di ruang ganti: '+rewards.join(', ')),btn('Lihat hadiah',()=>{dialog.close();go('skin')}));panel.append(btn('Kembali',()=>dialog.close(),'gold'))}
 $('cross').onclick=()=>dialog.close();window.addEventListener('hashchange',()=>{if(dialog.open)dialog.close();render()});
 boot();

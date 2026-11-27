@@ -10,7 +10,7 @@ case 4:case 9:r(3,6,16,2,'#d39b51');r(6,4,10,2,'#f6d377');r(8,16,2,4,'#fce5a3');
 case 5:r(5,4,12,3,'#e7edef');r(7,17,8,1,'#e7edef');r(7,20,8,1,'#e7edef');break;default:r(4,7,13,2,'#bedab0')}}
 function landscape(k,canvas){const g=canvas.getContext('2d'),pal=[['#6e628b','#f5b480','#795773','#da9e77'],['#9a706f','#fbd89b','#ad7568','#e5b080'],['#539aa8','#f4deb2','#708d7a','#d8bc88'],['#507d82','#c6d9b6','#537965','#82a361'],['#71658e','#f2b498','#776d94','#69879a'],['#363950','#a598bc','#525775','#868198']][k];let seed=k+31;const rnd=n=>{seed=(seed*16807)%2147483647;return seed%n},r=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x,y,w,h)},poly=(points,c)=>{g.fillStyle=c;g.beginPath();points.forEach(([x,y],j)=>j?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fill()};
  for(let y=0;y<128;y+=2){let grad=g.createLinearGradient(0,0,0,110);grad.addColorStop(0,pal[0]);grad.addColorStop(1,pal[1]);r(0,y,480,2,grad)}
- r(369,11,18,18,'#ffdb96');r(366,14,24,12,'#ffdb96');for(let j=0;j<25;j++)r(rnd(480),rnd(47),4+rnd(20),1,'#cfb7b3');
+ r(369,11,18,18,'#ffdb96');r(366,14,24,12,'#ffdb96');for(let j=0;j<6;j++){const x=18+j*78+rnd(18),y=12+rnd(28);r(x,y,18,3,'#d4b9b0');r(x+4,y-2,9,2,'#d4b9b0')}
  for(let x=0;x<480;x+=9){let y=63+Math.round(Math.sin(x/32)*8)+rnd(8);r(x,y,9,100-y,pal[2])}
  const building=(x,y,w,h)=>{r(x,y,w,h,pal[3]);r(x+w-4,y,4,h,pal[2]);r(x-2,y-2,w+4,3,'#e8c18f');for(let j=4;j<w-4;j+=7){r(x+j,y+5,3,5,'#5a505f');r(x+j+1,y+4,1,2,'#5a505f')}r(x+3,y+h-10,6,10,'#605466')},
  palm=(x,y)=>{r(x,y-25,3,25,'#786052');for(let s of [-1,1])for(let n=0;n<15;n++){r(x+s*n,y-25-Math.round(6*Math.sin(n/5))+Math.floor(n/5),2,3,'#446e62');r(x+s*n/2,y-26-Math.round(8*Math.sin(n/5)),2,3,'#5c856c')}};

@@ -66,9 +66,11 @@ def valid_profile(p, worlds):
           and isinstance(steps, dict), "Progres quest tidak valid.")
     done = list(dict.fromkeys(done))
     skin = p.get("skin", 0)
-    gates = [0,1,3,6,2,4,5,8,10,12,15,18]+[0]*20
+    gates = [0,1,3,6,2,4,5,8,10,12,15,18]+[2+i*16//19 for i in range(20)]
     character = p.get("character",0)
-    gear = p.get("gear",0)
+    def unlocked(key, thresholds):
+        value = p.get(key, 0)
+        return value if type(value) is int and 0 <= value < len(thresholds) and thresholds[value] <= len(done) else 0
     visible = active_worlds(worlds)
     active_ids = {q["id"] for w in visible for q in w["quests"]}
     key = p.get("worldKey", p.get("world", 0))
@@ -77,7 +79,8 @@ def valid_profile(p, worlds):
                 steps={str(i): n for i in active_ids if type(n := steps.get(str(i))) is int
                        and 0 < n < len(quests[i]["questions"])},
                 character=character if type(character) is int and 0<=character<12 else 0,
-                gear=gear if type(gear) is int and 0<=gear<=24 else 0,
+                gear=unlocked("gear",[0,4,8,12,2,7,5,3,4,9,10,15,7,3,6,4,5,11,6,8,9,2,3,4,5]),
+                accessory=unlocked("accessory",[0,2,4,6,8]),
                 skin=skin if type(skin) is int and 0 <= skin < len(gates) and gates[skin] <= len(done) else 0,
                 world=world, worldKey=visible[world]["key"] if visible else None)
 

@@ -36,3 +36,23 @@
 .rankTable{width:100%;border-collapse:collapse;margin:14px 0}.rankTable th,.rankTable td{text-align:left;padding:8px 5px;border-bottom:1px solid #51495d;overflow-wrap:anywhere}.rankTable .myScore{background:#393142}
 .bigSkin canvas{width:168px;height:192px;image-rendering:pixelated}
 .trailActor canvas{width:78px;height:89px;image-rendering:pixelated}
+
+/* Keep the landmark anchored when pointer styles on ordinary buttons change. */
+button.trailSite:is(:hover,:active):enabled{transform:translateX(-50%)}
+@keyframes trailStep{to{translate:0 -2px}}
+@media(prefers-reduced-motion:reduce){.trailActor.walking canvas{animation:none}}
+.bigSkin canvas{width:216px;height:168px;max-width:100%;object-fit:contain}
+.trailActor canvas{width:144px;height:112px}
+.fitting{display:grid;grid-template-columns:minmax(230px,1fr) 2fr;gap:18px;align-items:start}
+.fittingPreview,.fittingGallery{border:1px solid #514754;background:#211f2c;border-radius:14px;padding:18px;min-width:0}
+.fittingPreview{position:sticky;top:12px;text-align:center}
+.lookStage{display:grid;place-items:end center;border-radius:9px;padding:12px 0;background:radial-gradient(ellipse at 50% 100%,#516768,#2d3545 70%);border-bottom:6px solid #82745b}
+.lookStage canvas{width:min(100%,288px);height:auto;image-rendering:pixelated}
+.fittingPreview h2{margin:.75rem 0 .25rem}.fittingPreview p{margin:.25rem 0 .85rem}
+.fittingTabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:15px}
+.lookGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:9px}
+.lookCard{display:grid;justify-items:center;align-content:start;gap:4px;padding:9px 4px;line-height:1.25}
+.lookCard canvas{width:min(108px,100%);height:auto;image-rendering:pixelated}
+.lookCard small{color:#d4c7ab}
+.fitting button[aria-pressed=true]{border-color:#e7bd76;background:#413530;color:#ffe1ac}
+@media(max-width:720px){.fitting{grid-template-columns:minmax(0,1fr)}.fittingPreview{position:static}.lookStage canvas{width:180px}.fittingGallery{padding:12px}.lookGrid{grid-template-columns:repeat(auto-fill,minmax(90px,1fr))}}

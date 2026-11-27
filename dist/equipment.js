@@ -8,7 +8,7 @@ const newOutfits=[
  ['Zirah kerajaan','armor','#b9a35d'],['Seragam pelaut','tie','#92b6cc'],['Jubah penjaga gurun','robe','#d19b6b'],
  ['Daster kembang','dress','#b45e80'],['Daster batik','batik','#5c9195']
 ];
-for(const [name,,color] of newOutfits){outfits.push(name);colors.push(color);gates.push(0)}
+for(const [name,,color] of newOutfits){outfits.push(name);colors.push(color);gates.push(2+Math.floor((outfits.length-13)*16/19))}
 const items=[
  ['Tangan kosong',''],['Pedang kesatria','...a/..aa/.aa./.a../bbb./.c..'],
  ['Tombak angin','..a../.aaa./..a../..c../..c../..c../..c..'],
@@ -25,6 +25,14 @@ const items=[
  ['Pensil kuning','...ab/..ab./.ab../ab.../c....'],['Pena tinta','...aa/..aa./.aa../ab.../c....'],
  ['Penggaris','...aa/..aba/.aba./aba../aa...'],['Kuas lukis','...bb/..bba/.aa../.c.../c....']
 ];
+// Pixel size and grip coordinates in each item's source sprite.
+const itemMeasures=[null,[3,4,1,5],[2,5,2,5],[2,6,2,5],[1,1,0,4],[2,4,2,5],
+  [2,3,1,3],[2,2,2,0],[2,2,0,3],[2,4,2,5],[2,3,2,5],[3,4,1,5],
+  [2,4,0,3],[2,2,3,4],[3,4,3,5],[2,3,2,4],[1,1,0,3],[2,3,2,2],
+  [1,2,1,4],[1,1,0,3],[2,2,0,3],[1,2,1,3],[1,2,1,3],[1,2,1,3],[1,2,1,3]];
+const itemGates=[0,4,8,12,2,7,5,3,4,9,10,15,7,3,6,4,5,11,6,8,9,2,3,4,5];
+const accessories=['Tanpa aksesori','Kalung ambar','Topi jelajah','Kacamata laut','Headset studio'];
+const accessoryGates=[0,2,4,6,8];
 // Shared pixel grid keeps feet, sleeves and held items aligned on every body shape.
 const characters=[
   ['Raka','Petualang','Laki-laki',14,17,9,'crop','#d29870','#403341'],
@@ -43,9 +51,9 @@ const characters=[
 const vintageCuts=['jacket','robe','robe','armor','sport','tie','jacket','hood','robe','jacket','robe','sport'];
 const vintageNames=['Rompi desa','Jubah senja','Kaftan emas','Zirah oasis','Kemeja kebun','Blus pelaut','Jas juru tulis','Tunik giok','Mantel astronom','Jaket mercusuar','Jubah ahli nahwu','Jersey bintang'];
 outfits.splice(0,12,...vintageNames);
-function drawEquipment(canvas,skin,gear,character=0){
+function drawEquipment(canvas,skin,gear,character=0,accessory=0){
   const [, , ,w,body,legs,hair,tone,hairColor]=characters[character]||characters[0];
-  const g=canvas.getContext('2d'),ink='#382f3d',white='#f1dfbf',cx=18,base=46;
+  const g=canvas.getContext('2d'),ink='#382f3d',white='#f1dfbf',cx=36,base=54;
   const x=cx-Math.floor(w/2), hip=base-legs, y=hip-body, head=y-10;
   const cut=newOutfits[skin-12]?.[1]||vintageCuts[skin], color=colors[skin];
   const r=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x,y,w,h)};
@@ -76,10 +84,20 @@ function drawEquipment(canvas,skin,gear,character=0){
   if(cut==='helmet'){r(cx-6,head-2,13,2,color);r(cx-6,head,2,9,color);r(cx+5,head,2,9,color);r(x+2,y+5,5,4,'#687386')}
   if(cut==='sport'){r(x,y,w,2,white);r(cx-1,y+5,4,1,white);r(cx+2,y+6,1,4,white)}
   if(cut==='hat'){r(x,y+2,w,2,'#785d50');r(cx,y+3,2,6,white);r(x-1,hip-2,w+2,3,color)}
+  if(accessory===1){ // Necklace with an amber pendant
+    r(cx-4,y,2,2,white);r(cx+3,y,2,2,white);r(cx-2,y+2,5,1,white);r(cx,y+3,2,3,'#efac42');
+  }
+  if(accessory===2){r(cx-6,head-5,12,5,'#397e78');r(cx-6,head-2,12,2,'#efbd60');r(cx-9,head,19,2,'#32625e')}
+  if(accessory===3){r(cx-6,head+3,13,2,ink);for(const dx of [-5,1]){r(cx+dx,head+3,5,4,ink);r(cx+dx+1,head+4,3,2,'#80bec4')}}
+  if(accessory===4){r(cx-6,head-4,13,2,ink);for(const dx of [-7,6]){r(cx+dx,head-2,2,8,ink);r(cx+dx-1,head+3,4,5,'#56aea2')}r(cx+4,head+8,4,1,ink)}
   if(!gear)return;
-  const palette={a:['#b4d6df','#a7c9ec','#7cc5cc','#51475f'][(gear-1)%4],b:'#f4d079',c:'#977455'};
-  const pixels=items[gear][1].split('/');
-  pixels.forEach((row,j)=>[...row].forEach((p,i)=>{if(p!=='.')r(x+w+i,hip-2-pixels.length+j,1,1,palette[p])}));
+  const [sx,sy,gripX,gripY]=itemMeasures[gear];
+  const palette={a:gear===4?'#34334b':'#a1ccd0',b:gear===4?'#65e1cf':'#f4d079',c:'#976747'};
+  const hand=x+w, palm=hip-3;
+  items[gear][1].split('/').forEach((row,j)=>[...row].forEach((pixel,i)=>{
+    if(pixel!=='.')r(hand+(i-gripX)*sx,palm+(j-gripY)*sy,sx,sy,palette[pixel]);
+  }));
+  r(hand-1,palm,3,2,tone);
 }
 const emblems={Perunggu:'⬟',Perak:'✦',Emas:'★',Safir:'◆',Master:'♛'};
 function rankBadge(rank='Perunggu'){
