@@ -1,27 +1,37 @@
 'use strict';
 const $=id=>document.getElementById(id), panel=$('panel'), dialog=$('box'), main=$('main');
-const menu={studio:'Studio Guru',home:'Home',karakter:'Karakter',skin:'Koleksi Skin',map:'Map',arena:'Lobi Multiplayer',quest:'Quest & Achievement'};
+const menu={studio:'Studio Guru',home:'Home',karakter:'Karakter',skin:'Perlengkapan',global:'Peringkat Global',map:'Map',arena:'Lobi Multiplayer',quest:'Quest & Achievement'};
 let user=null,pos=64;
 function message(s,bad=false){const el=$('notice');if(el){el.textContent=s;el.className=bad?'warn notice':'success notice'}}
 function btn(label,action,cls=''){const b=document.createElement('button');b.type='button';b.textContent=label;b.className=cls;b.onclick=action;return b}
 function heading(tag,s){const h=document.createElement(tag);h.textContent=s;return h}
-function portrait(i){const c=document.createElement('canvas');c.width=22;c.height=26;sprite(c,i);return c}
+function portrait(i,gear=user?.gear||0){const c=document.createElement('canvas');c.width=26;c.height=26;drawEquipment(c,i,gear);return c}
 function show(title){panel.replaceChildren();let h=heading('h2',title);h.id='dialogTitle';panel.append(h);if(!dialog.open)dialog.showModal();dialog.scrollTop=0}
 function view(){const route=location.hash.slice(1);return user&&(route!=='studio'||isTeacher)&&Object.hasOwn(menu,route)?route:'home'}
 function go(key){if(location.hash==='#'+key)render();else location.hash=key}
 function render(){const previousX=activeTrail?.pose().x; if(view()==='map' && activeTrail?.world===user?.world && previousX!=null)pos=previousX; activeTrail?.destroy();stopArena();const current=view();$('nav').replaceChildren();for(const [key,label] of Object.entries(menu)){if(key==='studio'&&!isTeacher)continue;let b=btn(label,()=>go(key),key===current?'active':'');b.disabled=!user&&key!=='home';if(key===current)b.setAttribute('aria-current','page');$('nav').append(b)}
- $('playerInfo').textContent=user?user.name+' · ✦ '+(user.done.length*50+(user.arenaXP||0))+' XP':'Profil pemain';main.replaceChildren();({studio,home,karakter,skin:wardrobe,map:mapView,quest:journal,arena:arenaView})[current]();let el=document.createElement('p');el.id='notice';el.setAttribute('role','status');main.append(el)}
+ $('playerInfo').textContent=user?user.name+' · ✦ '+(user.done.length*50+(user.arenaXP||0))+' XP':'Profil pemain';main.replaceChildren();({global:globalBoard,studio,home,karakter,skin:equipmentView,map:mapView,quest:journal,arena:arenaView})[current]();let el=document.createElement('p');el.id='notice';el.setAttribute('role','status');main.append(el)}
 function home(){main.innerHTML='<section class="homeHero"><div><span class="label">ATLAS NAHWU</span><h1>Desa Alif</h1><p>Jelajahi wilayah Atlas, pecahkan misi bahasa Arab, dan buka pakaian baru untuk karaktermu.</p><b class="tagline">ATLAS BAHASA ARAB</b></div></section><div class="twocol"><section class="box" id="login"></section><section class="box" id="continue"></section></div>';
  const area=$('login'),side=$('continue');if(!user){authHome(area,side);return}
- document.querySelector('.tagline').textContent=worlds.length+' WILAYAH · '+lessons.filter(Boolean).length+' QUEST · 12 SKIN';
+ document.querySelector('.tagline').textContent=worlds.length+' WILAYAH · '+lessons.filter(Boolean).length+' QUEST · '+outfits.length+' OUTFIT';
  area.append(heading('h2','Selamat datang, '+user.name),heading('p',user.done.filter(id=>lessons[id]).length+' dari '+lessons.filter(Boolean).length+' quest selesai'),btn('Jelajahi map →',()=>go('map'),'gold'),btn('Masuk lobi',()=>go('arena')),btn('Keluar akun',logout));
  if(isTeacher)area.append(btn('Buka Studio Guru',()=>go('studio')));
  side.append(heading('h2','Lanjutkan quest'));const id=Object.keys(user.steps).map(Number).find(i=>user.steps[i]>0)??lessons.findIndex((a,i)=>a&&!user.done.includes(i));if(id>=0)side.append(heading('p',lessons[id][0]+' · '+worlds.find(w=>w.quests.some(q=>q.id===id)).title),btn('Buka quest',()=>lesson(id)));else if(!worlds.some(w=>w.quests.length))side.append(heading('p','Belum ada quest yang tersedia.'));else side.append(heading('p','Semua quest telah selesai. Kamu bisa mengulang latihan melalui jurnal.'))}
 function karakter(){main.innerHTML='<span class="label">PROFIL PEMAIN</span><h1>Tampilan Karakter</h1><div class="twocol"><section class="bigSkin" id="look"></section><section class="box"><h2>Nama karakter</h2><p>Nama ini tampil di atas karaktermu saat menjelajah.</p><form id="rename"><label>Nama panggilan<br><input id="newName" required maxlength="24"></label><button class="gold">Simpan nama</button></form></section></div>';
- $('look').append(portrait(user.skin),heading('h2',user.name),heading('p',outfits[user.skin]),heading('p','Rank arena · '+(user.arenaRank||'Perunggu')+' · '+(user.arenaRP||0)+' RP'),btn('Ganti skin',()=>go('skin')));$('newName').value=user.name;
+ $('look').append(portrait(user.skin),heading('h2',user.name),heading('p',outfits[user.skin]),heading('p',items[user.gear||0][0]),rankBadge(user.arenaRank),heading('small',(user.arenaRP||0)+' RP'),btn('Peringkat Global',()=>go('global')),btn('Ganti perlengkapan',()=>go('skin')));$('newName').value=user.name;
  $('look').append(heading('small','ID akun · '+user.id));
  $('rename').onsubmit=async e=>{e.preventDefault();if(await save(p=>p.name=$('newName').value.trim())){render();message('Nama karakter berhasil disimpan.')}}}
-function wardrobe(){main.innerHTML='<span class="label">INVENTARIS</span><h1>Koleksi Skin</h1><p>Pilih pakaian yang sudah terbuka untuk memakainya di semua wilayah.</p><div class="cards" id="skins"></div>';outfits.forEach((s,i)=>{const b=btn('',async()=>{if(await save(p=>{if(gates[i]<=p.done.length)p.skin=i})){render();message('Skin berhasil dipakai.')}},'skinButton');const body=document.createElement('div');body.append(heading('h3',s),heading('small',i===user.skin?'✓ Dipakai':gates[i]>user.done.length?'Terkunci · '+gates[i]+' quest':'Pakai skin'));b.disabled=i===user.skin||gates[i]>user.done.length;b.append(portrait(i),body);$('skins').append(b)})}
+function wardrobe(){main.innerHTML='<span class="label">INVENTARIS</span><h1>Perlengkapan</h1><h2>Outfit</h2><p>Pilih pakaian yang sudah terbuka untuk memakainya di semua wilayah.</p><div class="cards" id="skins"></div>';outfits.forEach((s,i)=>{const b=btn('',async()=>{if(await save(p=>{if(gates[i]<=p.done.length)p.skin=i})){render();message('Skin berhasil dipakai.')}},'skinButton');const body=document.createElement('div');body.append(heading('h3',s),heading('small',i===user.skin?'✓ Dipakai':gates[i]>user.done.length?'Terkunci · '+gates[i]+' quest':'Pakai skin'));b.disabled=i===user.skin||gates[i]>user.done.length;b.append(portrait(i),body);$('skins').append(b)})}
+function equipmentView(){
+  wardrobe();
+  main.append(heading('h2','Senjata dan aksesori'),heading('p','Pilih satu benda untuk dibawa saat menjelajah dan berlomba.'));
+  const group=document.createElement('div');group.className='cards';main.append(group);
+  items.forEach(([name],i)=>{
+    const selected=(user.gear||0)===i;
+    const b=btn('',async()=>{if(await save(p=>p.gear=i)){render();message(name+' dipilih.')}},'skinButton');
+    b.disabled=selected;b.append(portrait(user.skin,i),heading('span',name+(selected?' · Dipakai':'')));group.append(b);
+  });
+}
 function status(i){return user.steps[i]?'Lanjut · soal '+(user.steps[i]+1)+'/'+bank[i].length:user.done.includes(i)?'✓ Selesai · ulangi':bank[i].length+' soal · 50 XP'}
 function questCard(i,j){const b=btn('',()=>lesson(i),'card');b.append(heading('small','POS '+(j+1)),heading('h3',lessons[i][0]),heading('small',status(i)));return b}
 function mapView(){
@@ -36,7 +46,7 @@ function mapView(){
   const list=document.createElement('div');list.className='cards';main.append(list);
   world.quests.forEach((q,j)=>{const button=btn('',()=>trail.goto(j),'card');button.append(heading('small',siteAt(world.visual,j)[0]),heading('h3',q.lesson[0]),heading('small',status(q.id)));list.append(button)});
 }
-function journal(){main.innerHTML='<span class="label">JURNAL PEMAIN</span><h1>Quest &amp; Achievement</h1><h2 class="section">Pencapaian</h2><div id="badges"></div><h2 class="section">Daftar quest</h2>';const d=user.done;const stats=[['Langkah Pertama',d.length,1,'quest'],['Penjelajah Atlas',worlds.filter(m=>m.quests.length&&m.quests.every(q=>d.includes(q.id))).length,worlds.length,'wilayah tuntas'],['Kolektor Skin',gates.filter(g=>g<=d.length).length,12,'skin'],['Ahli Nahwu',d.filter(id=>lessons[id]).length,lessons.filter(Boolean).length,'quest']];for(const [name,n,max,unit] of stats){let el=document.createElement('div');el.className='achievement';el.append(heading('strong',(max>0&&n>=max?'★ ':'☆ ')+name),heading('small',Math.min(n,max)+' / '+max+' '+unit));$('badges').append(el)}
+function journal(){main.innerHTML='<span class="label">JURNAL PEMAIN</span><h1>Quest &amp; Achievement</h1><h2 class="section">Pencapaian</h2><div id="badges"></div><h2 class="section">Daftar quest</h2>';const d=user.done;const stats=[['Langkah Pertama',d.length,1,'quest'],['Penjelajah Atlas',worlds.filter(m=>m.quests.length&&m.quests.every(q=>d.includes(q.id))).length,worlds.length,'wilayah tuntas'],['Kolektor Skin',gates.filter(g=>g<=d.length).length,gates.length,'skin'],['Ahli Nahwu',d.filter(id=>lessons[id]).length,lessons.filter(Boolean).length,'quest']];for(const [name,n,max,unit] of stats){let el=document.createElement('div');el.className='achievement';el.append(heading('strong',(max>0&&n>=max?'★ ':'☆ ')+name),heading('small',Math.min(n,max)+' / '+max+' '+unit));$('badges').append(el)}
  worlds.forEach(m=>{main.append(heading('h3',m.title));let g=document.createElement('div');g.className='cards questrow';m.quests.forEach((q,j)=>g.append(questCard(q.id,j)));main.append(g)})}
 function questScene(i){const world=worlds.find(w=>w.quests.some(q=>q.id===i));return venueBanner(world.visual,world.quests.findIndex(q=>q.id===i))}
 function lesson(i){const a=lessons[i];show(a[0]);panel.append(questScene(i));let example=document.createElement('div');example.className='example';let arab=heading('b',a[1]);arab.className='ar';arab.lang='ar';arab.dir='rtl';example.append(arab,heading('span',a[2]));if(a[1]||a[2])panel.append(example);if(a[3])panel.append(heading('h3','Cara membacanya'),heading('p',a[3]));if(a[4])panel.append(heading('h3','Perhatikan'),heading('p',a[4]));panel.append(btn(user.steps[i]?'Lanjut ke soal '+(user.steps[i]+1):'Mulai latihan · '+bank[i].length+' soal',()=>quiz(i),'gold'))}

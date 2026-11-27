@@ -45,3 +45,8 @@ Di Studio Guru, pilih **Buat map** atau **Ubah map**, tentukan **Tema visual map
 **Hapus map** menampilkan nama wilayah dan jumlah quest sebelum konfirmasi. Setelah dikonfirmasi, map dan materi quest ikut dihapus. XP serta skin dari quest yang sudah diselesaikan tetap dihitung. Pemain dapat memuat ulang untuk melihat perubahan. Jika seluruh map dihapus, guru dapat membuat map baru dari Studio Guru.
 
 Pada Lobi Multiplayer, pembuat ruangan memilih map serta jenis balapan sebelum menekan **Buat ruangan**. Peserta bergabung di lintasan yang sama; soal mengikuti jenis balapan. Setiap ruangan menyimpan nama dan tema map saat dibuat sehingga perubahan atau penghapusan map tidak mengganggu lomba yang sedang berjalan.
+
+## Quest, perlengkapan, dan peringkat global
+Di Studio Guru, gunakan **Hapus quest** di samping judul quest lalu konfirmasi. Map tetap dapat dimainkan dan XP penyelesaian terdahulu tetap tercatat. Di **Perlengkapan** pemain dapat memilih kombinasi outfit dan satu item genggam. Ada 18 outfit tambahan dan 20 item kosmetik, tersedia sejak awal. Pilihan disimpan per akun dan terlihat di profil, Atlas, serta arena. Item tidak mengubah aturan balapan.
+
+Menu **Peringkat Global** menampilkan semua akun pada database deployment, 25 pemain per halaman, diurutkan dari RP arena tertinggi. RP sama menghasilkan posisi yang sama. Posisi akun sendiri ditampilkan di atas daftar. Simbol rank muncul di profil dan lobi multiplayer.

@@ -57,11 +57,11 @@ function explore(host,{theme,stops,name,skin,initial=64,enter,allowed=()=>true})
   });
   function floorAt(px){return obstacles.find(o=>px>o.left&&px<o.right)?.top||0}
   height=floorAt(x);
-  function actor(label,outfit,mine){
+  function actor(label,outfit,mine,gear){
     const el=document.createElement('div');el.className='trailActor'+(mine?' mine':'');
-    el.append(heading('small',label),portrait(outfit));stage.append(el);return el;
+    el.append(heading('small',label),portrait(outfit,gear));stage.append(el);return el;
   }
-  const self=actor(user.name,skin,true), peers=new Map();
+  const self=actor(user.name,skin,true,user.gear||0), peers=new Map();
   function jump(){if(height===floorAt(x)&&!dialog.open){velocity=635;height+=.01;jumps++}}
   function nearby(){return anchors.findIndex((a,i)=>Math.abs(a-x)<=76&&allowed(i))}
   function interact(){const i=nearby();if(i>=0)enter(i)}
@@ -113,14 +113,14 @@ function explore(host,{theme,stops,name,skin,initial=64,enter,allowed=()=>true})
   }
   frame=requestAnimationFrame(tick);
   const api={
-    pose:()=>({x:Math.round(x),jump:jumps,skin}),
+    pose:()=>({x:Math.round(x),jump:jumps,skin,gear:user.gear||0}),
     goto:i=>{target=anchors[i];viewport.focus({preventScroll:true})},
     mark:i=>nodes.forEach((b,j)=>b.classList.toggle('goal',i===j)),
     sync(members){
       const present=new Set();
       members.filter(m=>!m.me&&!m.left).forEach((m,j)=>{
         present.add(m.avatar);let peer=peers.get(m.avatar);
-        if(!peer){peer={el:actor(m.name,m.skin||0,false),jump:m.jump};peers.set(m.avatar,peer)}
+        if(!peer||peer.skin!==m.skin||peer.gear!==m.gear){peer?.el.remove();peer={el:actor(m.name,m.skin||0,false,m.gear||0),jump:m.jump,skin:m.skin,gear:m.gear};peers.set(m.avatar,peer)}
         peer.el.style.bottom='calc(15% + '+(4+j*8+floorAt(m.x))+'px)';
         peer.el.style.left=m.x+'px';
         if(peer.jump!==m.jump){peer.el.animate([{translate:'0 0'},{translate:'0 -105px'},{translate:'0 0'}],550);peer.jump=m.jump}

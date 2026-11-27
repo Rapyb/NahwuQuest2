@@ -78,7 +78,7 @@ def api(db, data):
     pose = data.get("pose")
     if room and code == data.get("code") and isinstance(pose, dict):
         member = room["members"][key]
-        for field, maximum in (("x",2140), ("jump",10**9), ("skin",11)):
+        for field, maximum in (("x",2140), ("jump",10**9), ("skin",29), ("gear",20)):
             value = pose.get(field)
             if type(value) is int and 0 <= value <= maximum:
                 member[field] = value
@@ -156,8 +156,10 @@ def api(db, data):
     if room:
         members=room["members"]
         p=members[key]
+        marks=",".join("?" for _ in members)
+        ranks={pid:rank(points) for pid,points in db.execute(f"SELECT id,rp FROM players WHERE id IN ({marks})",tuple(members))}
         result["room"]=dict(code=code,arenaMap=room.get("arenaMap"),phase=room["phase"],quest=room["quest"],start=room["start"],host=key==next(iter(members)),members=[
-            {**{f:v[f] for f in ("name","ready","step","place","elapsed","left")}, "avatar":k[:16],"x":v.get("x",64),"jump":v.get("jump",0),"skin":v.get("skin",0),"me":k==key,"host":i==0,"reward":rewards(v["place"])} for i,(k,v) in enumerate(members.items())],retry=p.get("retry",0))
+            {**{f:v[f] for f in ("name","ready","step","place","elapsed","left")}, "rank":ranks.get(k,"Perunggu"),"gear":v.get("gear",0),"avatar":k[:16],"x":v.get("x",64),"jump":v.get("jump",0),"skin":v.get("skin",0),"me":k==key,"host":i==0,"reward":rewards(v["place"])} for i,(k,v) in enumerate(members.items())],retry=p.get("retry",0))
         if room["phase"]=="race" and now>=room["start"] and not p["place"]:
             q=room["questions"][p["step"]]
             result["room"]["question"]={f:q[f] for f in ("prompt","choices")}

@@ -7,7 +7,13 @@ function studio() {
     section.append(heading('h2',world.title),heading('p',world.theme),
       btn('Ubah map',()=>mapForm(wid)),btn('+ Buat quest',()=>questForm(wid)),btn('Hapus map',()=>deleteMapForm(wid)));
     const list=document.createElement('div');list.className='editorList';
-    for(const q of world.quests) list.append(btn(q.lesson[0]+' · '+q.questions.length+' soal',()=>questForm(wid,q)));
+    for(const q of world.quests){
+      const row=document.createElement('div');row.className='questTools';
+      row.append(btn(q.lesson[0]+' · '+q.questions.length+' soal',()=>questForm(wid,q)),btn('Hapus quest',()=>{
+        const body=editor('Hapus quest '+q.lesson[0]+'?',()=>({kind:'deleteQuest',world:wid,quest:q.id}),'Hapus quest');
+        body.append(heading('p',q.questions.length+' soal dalam quest ini akan dihapus dari '+world.title+'. XP yang sudah diperoleh tetap tersimpan.'),btn('Batal',()=>dialog.close()));
+      }));list.append(row);
+    }
     section.append(list);main.append(section);
   }
 }
@@ -22,7 +28,7 @@ function editor(title, fields, submitText='Terbitkan') {
       const data=await requestAccount('publish',{version,...fields()});
       setCatalog(data);
 
-      dialog.close();render();message(submitText==='Hapus map'?'Map telah dihapus.':'Terbit. Muat ulang untuk melihat perubahan di perangkat lain.');
+      dialog.close();render();message(submitText==='Hapus quest'?'Quest telah dihapus.':submitText==='Hapus map'?'Map telah dihapus.':'Terbit. Muat ulang untuk melihat perubahan di perangkat lain.');
     } catch(err){status.textContent=err.message} finally {submit.disabled=false}
   };
   form.append(submit,status);

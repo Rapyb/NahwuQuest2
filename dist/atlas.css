@@ -30,3 +30,7 @@
 .trailBarrier.log{border-radius:25% 15% 8% 20%;background:repeating-linear-gradient(0deg,#86593c 0 5px,#a67848 6px 9px);box-shadow:inset 10px 0 #cca367,inset 14px 0 #6f5038}
 .trailBarrier.barrel{border-radius:18%;background:linear-gradient(0deg,transparent 17%,#59616a 18% 28%,transparent 29% 70%,#59616a 71% 81%,transparent 82%),repeating-linear-gradient(90deg,#ba875a 0 9px,#845c40 10px 12px);box-shadow:inset -4px 0 #795741}
 .trailBarrier.wall{background:repeating-linear-gradient(0deg,transparent 0 12px,#716776 13px 15px),repeating-linear-gradient(90deg,#aa9d9c 0 18px,#817783 19px 21px)}
+.questTools{display:flex;gap:4px;align-items:center}.questTools button:last-child{color:#fac3b5}
+.rankBadge{display:inline-block;white-space:nowrap;font-weight:750;padding:2px 8px;border:1px solid currentColor;border-radius:8px;background:#23202b}
+.rankPerunggu{color:#dfac87}.rankPerak{color:#d3dbe2}.rankEmas{color:#ffda80}.rankSafir{color:#94cefa}.rankMaster{color:#e7b1ff}
+.rankTable{width:100%;border-collapse:collapse;margin:14px 0}.rankTable th,.rankTable td{text-align:left;padding:8px 5px;border-bottom:1px solid #51495d;overflow-wrap:anywhere}.rankTable .myScore{background:#393142}

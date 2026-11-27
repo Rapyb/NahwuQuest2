@@ -47,7 +47,7 @@ function arenaView() {
           $('playerInfo').textContent=user.name+' · ✦ '+(user.done.length*50+data.xp)+' XP';
         }
       }
-      $('arenaRank').textContent = data.rank+' · '+data.rp+' RP'+(data.next?' / '+data.next+' RP':'')+' · '+data.xp+' XP arena';
+      $('arenaRank').replaceChildren(rankBadge(data.rank),heading('span',' · '+data.rp+' RP'+(data.next?' / '+data.next+' RP':'')+' · '+data.xp+' XP arena'));
       draw(data);
     } catch (err) {
       if (run !== arenaRun) return;
@@ -111,7 +111,7 @@ function arenaView() {
       rooms.append(form);
       for(const room of data.rooms) rooms.append(btn(questNames[room.quest]+' · '+(room.arenaMap?.title??'Arena')+' · '+room.code+' · '+room.count+'/4',()=>update('join',{code:room.code}),'roomLink'));
       if(!data.rooms.length) rooms.append(heading('p','Belum ada ruangan terbuka. Buat ruangan dan bagikan kodenya ke temanmu.'));
-      area.append(create,rooms);
+      create.append(btn('Peringkat Global',()=>go('global')));area.append(create,rooms);
       return;
     }
     const me=r.members.find(p=>p.me), box=card(questNames[r.quest]), board=card(r.phase==='waiting'?'Pemain di lobi':'Klasemen balapan');
@@ -137,7 +137,7 @@ function arenaView() {
     const sorted=[...r.members].sort((a,b)=>(a.place||9)-(b.place||9)||b.step-a.step);
     for(const p of sorted) {
       const row=document.createElement('div');row.className='arenaRow';
-      row.append(heading('strong',p.name+(p.me?' (kamu)':'')),heading('small',r.phase==='waiting'?(p.host?'Host · ':'')+(p.ready?'Siap':'Menunggu'):p.place?'#'+p.place+' · '+p.elapsed.toFixed(2)+' dtk':p.left?'Keluar':p.step+'/5'));
+      row.append(rankBadge(p.rank),heading('strong',p.name+(p.me?' (kamu)':'')),heading('small',r.phase==='waiting'?(p.host?'Host · ':'')+(p.ready?'Siap':'Menunggu'):p.place?'#'+p.place+' · '+p.elapsed.toFixed(2)+' dtk':p.left?'Keluar':p.step+'/5'));
       board.append(row);
     }
     board.append(btn(r.phase==='waiting'?'Keluar ruangan':'Kembali ke lobi',()=>{

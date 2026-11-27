@@ -58,13 +58,15 @@ def active_worlds(entries):
 def valid_profile(p, worlds):
     check(isinstance(p, dict), "Profil tidak valid.")
     quests = {q["id"]: q for w in worlds for q in w["quests"]}
+    historical = {i for w in worlds for i in w.get("retired", [])}
     done = p.get("done", [])
     steps = p.get("steps", {})
-    check(isinstance(done, list) and all(type(i) is int and i in quests for i in done)
+    check(isinstance(done, list) and all(type(i) is int and (i in quests or i in historical) for i in done)
           and isinstance(steps, dict), "Progres quest tidak valid.")
     done = list(dict.fromkeys(done))
     skin = p.get("skin", 0)
-    gates = [0,1,3,6,2,4,5,8,10,12,15,18]
+    gates = [0,1,3,6,2,4,5,8,10,12,15,18]+[0]*18
+    gear = p.get("gear",0)
     visible = active_worlds(worlds)
     active_ids = {q["id"] for w in visible for q in w["quests"]}
     key = p.get("worldKey", p.get("world", 0))
@@ -72,6 +74,7 @@ def valid_profile(p, worlds):
     return dict(name=field(p.get("name"), 24), done=done,
                 steps={str(i): n for i in active_ids if type(n := steps.get(str(i))) is int
                        and 0 < n < len(quests[i]["questions"])},
+                gear=gear if type(gear) is int and 0<=gear<=20 else 0,
                 skin=skin if type(skin) is int and 0 <= skin < len(gates) and gates[skin] <= len(done) else 0,
                 world=world, worldKey=visible[world]["key"] if visible else None)
 
@@ -118,6 +121,27 @@ def account_action(db, data):
     if action == "logout":
         db.execute("DELETE FROM sessions WHERE digest=?", (token_hash(session),))
         return {"ok":True}
+    if action == "leaderboard":
+        from server import rank
+        offset=data.get("offset",0)
+        check(type(offset) is int and offset>=0,"Halaman tidak valid.")
+        scores={key:rp for key,rp in db.execute("SELECT id,rp FROM players")}
+        ranking=[]
+        for account_id, raw in db.execute("SELECT id,profile FROM accounts"):
+            profile=json.loads(raw)
+            rp=scores.get(token_hash(profile["arenaToken"]),0)
+            ranking.append((rp,profile["name"],account_id))
+        ranking.sort(key=lambda row:(-row[0],row[1].casefold(),row[2]))
+        page=[]; mine=None; previous=None
+        for i,(rp,name,ident) in enumerate(ranking):
+            if rp!=previous:
+                place=i+1
+                previous=rp
+            if ident==owner or offset<=i<offset+25:
+                row=dict(place=place,name=name,rp=rp,rank=rank(rp),me=ident==owner)
+                if ident==owner: mine=row
+                if offset<=i<offset+25: page.append(row)
+        return dict(rows=page,mine=mine,total=len(ranking))
     worlds, version = catalog(db)
     visible = active_worlds(worlds)
     if action == "publish":
@@ -130,7 +154,16 @@ def account_action(db, data):
             world = visible[wid]
             # Retain only IDs to preserve XP and prevent quest ID reuse.
             worlds[world["key"]] = {"key":world["key"], "deleted":True,
+                                    "retired":world.get("retired",[]),
                                     "quests":[{"id":q["id"]} for q in world["quests"]]}
+        elif data.get("kind") == "deleteQuest":
+            check(wid<len(visible), "Map tidak ditemukan.")
+            world=visible[wid]
+            quest_id=data.get("quest")
+            quest=next((q for q in world["quests"] if type(quest_id) is int and q["id"]==quest_id), None)
+            check(quest, "Quest tidak ditemukan.")
+            world["quests"].remove(quest)
+            world.setdefault("retired", []).append(quest_id)
         elif data.get("kind") == "map":
             if wid == len(visible):
                 world = {"key":len(worlds), "visual":len(worlds)%6, "quests":[]}
@@ -156,7 +189,7 @@ def account_action(db, data):
                 check(len(set(question[1:4]))==3, "Ketiga pilihan jawaban harus berbeda.")
                 questions.append(question)
             if target is None:
-                target = {"id":1+max((q["id"] for w in worlds for q in w["quests"]), default=-1)}
+                target = {"id":1+max((i for w in worlds for i in [*w.get("retired", []), *(q["id"] for q in w["quests"])]), default=-1)}
                 quests.append(target)
             target.update(lesson=lesson,questions=questions)
         version += 1
