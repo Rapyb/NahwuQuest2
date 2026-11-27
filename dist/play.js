@@ -29,15 +29,15 @@ function mapView(){
   main.append(heading('h1',world.title),heading('p',world.theme));
   const nav=document.createElement('nav');nav.className='atlas';main.append(nav);
   worlds.forEach((m,k)=>{const button=btn(m.title,async()=>{if(await save(p=>p.world=k)){pos=64;render()}});button.setAttribute('aria-current',k===w);nav.append(button)});
-  main.append(heading('p','Berjalan dengan ← → atau A/D, lompat dengan ↑ atau Spasi. Tekan E di dekat lokasi untuk membuka quest.'));
+  main.append(heading('p','Berjalan dengan ← → atau A/D, lompat dengan ↑ atau Spasi. Tekan E di dekat lokasi untuk mengambil quest.'));
   const trail=explore(main,{theme:w%6,name:world.title,skin:user.skin,initial:pos,stops:world.quests.map(q=>q.lesson[0]),enter:j=>lesson(world.quests[j].id)});
   trail.world=w;
   const list=document.createElement('div');list.className='cards';main.append(list);
-  world.quests.forEach((q,j)=>{const button=btn('',()=>trail.goto(j),'card');button.append(heading('small',sites[j%3]),heading('h3',q.lesson[0]),heading('small',status(q.id)));list.append(button)});
+  world.quests.forEach((q,j)=>{const button=btn('',()=>trail.goto(j),'card');button.append(heading('small',siteAt(w%6,j)[0]),heading('h3',q.lesson[0]),heading('small',status(q.id)));list.append(button)});
 }
 function journal(){main.innerHTML='<span class="label">JURNAL PEMAIN</span><h1>Quest &amp; Achievement</h1><h2 class="section">Pencapaian</h2><div id="badges"></div><h2 class="section">Daftar quest</h2>';const d=user.done;const stats=[['Langkah Pertama',d.length,1,'quest'],['Penjelajah Atlas',worlds.filter(m=>m.quests.length&&m.quests.every(q=>d.includes(q.id))).length,worlds.length,'wilayah tuntas'],['Kolektor Skin',gates.filter(g=>g<=d.length).length,12,'skin'],['Ahli Nahwu',d.length,lessons.length,'quest']];for(const [name,n,max,unit] of stats){let el=document.createElement('div');el.className='achievement';el.append(heading('strong',(n>=max?'★ ':'☆ ')+name),heading('small',Math.min(n,max)+' / '+max+' '+unit));$('badges').append(el)}
  worlds.forEach(m=>{main.append(heading('h3',m.title));let g=document.createElement('div');g.className='cards questrow';m.quests.forEach((q,j)=>g.append(questCard(q.id,j)));main.append(g)})}
-function questScene(i){const world=worlds.find(w=>w.quests.some(q=>q.id===i));return venueBanner(world.quests.findIndex(q=>q.id===i)%3)}
+function questScene(i){const world=worlds.find(w=>w.quests.some(q=>q.id===i));return venueBanner(worlds.indexOf(world)%6,world.quests.findIndex(q=>q.id===i))}
 function lesson(i){const a=lessons[i];show(a[0]);panel.append(questScene(i));let example=document.createElement('div');example.className='example';let arab=heading('b',a[1]);arab.className='ar';arab.lang='ar';arab.dir='rtl';example.append(arab,heading('span',a[2]));if(a[1]||a[2])panel.append(example);if(a[3])panel.append(heading('h3','Cara membacanya'),heading('p',a[3]));if(a[4])panel.append(heading('h3','Perhatikan'),heading('p',a[4]));panel.append(btn(user.steps[i]?'Lanjut ke soal '+(user.steps[i]+1):'Mulai latihan · '+bank[i].length+' soal',()=>quiz(i),'gold'))}
 function quiz(i){const n=user.steps[i]||0,[q,correct,...rest]=bank[i][n];show(lessons[i][0]);panel.append(questScene(i),heading('small','SOAL '+(n+1)+' / '+bank[i].length),heading('h3',q));let choices=document.createElement('div');choices.className='choices';let note=heading('p','');note.setAttribute('role','status');panel.append(choices,note);let opts=[correct,...rest.slice(0,2)];for(let j=2;j>0;j--){let k=Math.floor(Math.random()*(j+1));[opts[j],opts[k]]=[opts[k],opts[j]]}
  opts.forEach(x=>{let b=btn(x,async()=>{if(x!==correct){b.disabled=true;note.textContent='Belum tepat. '+rest[2]+' Coba lagi.';return}

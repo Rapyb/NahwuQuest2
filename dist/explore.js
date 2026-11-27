@@ -1,5 +1,5 @@
 'use strict';
-const sites=['Rumah kitab','Bawah pohon kurma','Sumur desa'];
+
 let activeTrail=null;
 function landmark(kind){
   const c=document.createElement('canvas');c.width=88;c.height=70;
@@ -45,14 +45,24 @@ function explore(host,{theme,stops,name,skin,initial=64,enter,allowed=()=>true})
   const prompt=heading('p','');host.append(viewport,controls,prompt);
   const nodes=stops.map((s,i)=>{
     const b=btn('',()=>{target=anchors[i];viewport.focus({preventScroll:true})},'trailSite');
-    b.style.left=anchors[i]+'px';b.append(heading('span',(i+1)+' · '+s),landmark(i%3));stage.append(b);return b;
+    b.style.left=anchors[i]+'px';b.setAttribute('aria-label',siteAt(theme,i)[0]+' · '+s);b.append(heading('span',(i+1)+' · '+siteAt(theme,i)[0]),drawSite(siteAt(theme,i)[1]));stage.append(b);return b;
   });
+  const obstacles=anchors.map((anchor,i)=>{
+    const from=i?anchors[i-1]:56;
+    const center=(from+anchor)/2, size=42+(i%3)*8, top=36+(i%3)*10;
+    const el=document.createElement('div');el.className='trailBarrier '+barriers[theme][1];
+    el.style.left=(center-size/2)+'px';el.style.width=size+'px';el.style.height=top+'px';
+    el.setAttribute('aria-label',barriers[theme][0]);stage.append(el);
+    return {left:center-size/2-9,right:center+size/2+9,top};
+  });
+  function floorAt(px){return obstacles.find(o=>px>o.left&&px<o.right)?.top||0}
+  height=floorAt(x);
   function actor(label,outfit,mine){
     const el=document.createElement('div');el.className='trailActor'+(mine?' mine':'');
     el.append(heading('small',label),portrait(outfit));stage.append(el);return el;
   }
   const self=actor(user.name,skin,true), peers=new Map();
-  function jump(){if(height===0&&!dialog.open){velocity=635;height=.01;jumps++}}
+  function jump(){if(height===floorAt(x)&&!dialog.open){velocity=635;height+=.01;jumps++}}
   function nearby(){return anchors.findIndex((a,i)=>Math.abs(a-x)<=76&&allowed(i))}
   function interact(){const i=nearby();if(i>=0)enter(i)}
   function control(label,direction){
@@ -60,7 +70,7 @@ function explore(host,{theme,stops,name,skin,initial=64,enter,allowed=()=>true})
     b.onpointerup=b.onpointercancel=b.onlostpointercapture=()=>{dir=0};
     b.onclick=e=>{if(e.detail===0)target=x+direction*80};return b;
   }
-  const use=btn('Masuk lokasi',interact,'gold');
+  const use=btn('Ambil',interact,'gold');
   controls.append(control('← Kiri',-1),control('Kanan →',1),btn('↑ Lompat',jump),use);
   function clear(){dir=0;target=null}
   window.addEventListener('blur',clear,events);
@@ -82,14 +92,22 @@ function explore(host,{theme,stops,name,skin,initial=64,enter,allowed=()=>true})
     const dt=Math.min(.05,(now-last)/1000);last=now;
     if(dialog.open)clear();
     const dx=dir*320*dt||(target===null?0:Math.sign(target-x)*Math.min(Math.abs(target-x),320*dt));
-    x=Math.max(25,Math.min(width-25,x+dx));if(target!==null&&Math.abs(target-x)<1)target=null;
-    if(height>0){velocity-=1550*dt;height=Math.max(0,height+velocity*dt)}
+    let nextX=Math.max(25,Math.min(width-25,x+dx)),blocked=false;
+    for(const o of obstacles){
+      if(height>=o.top)continue;
+      if(dx>0&&x<=o.left&&nextX>o.left){nextX=o.left;blocked=true;break}
+      if(dx<0&&x>=o.right&&nextX<o.right){nextX=o.right;blocked=true;break}
+    }
+    x=nextX;
+    if(target!==null&&Math.abs(target-x)<1)target=null;
+    const floor=floorAt(x);
+    if(height>floor||velocity>0){velocity-=1550*dt;height=Math.max(floor,height+velocity*dt)}
+    if(height===floor)velocity=0;
     self.style.left=x+'px';self.style.transform='translate(-50%,'+(-height)+'px)';
-    self.classList.toggle('walking',!!dx&&!height);
+    self.classList.toggle('walking',!!dx&&!blocked&&height===floor);
     viewport.scrollLeft=x-viewport.clientWidth*.45;
     const i=nearby();use.disabled=i<0;
-    const label=i<0?'Masuk lokasi':'Masuk · '+sites[i%3];if(use.textContent!==label)use.textContent=label;
-    const hint=i<0?(stops.length?'Dekati lokasi quest.':'Wilayah ini belum memiliki quest.'):'Di '+sites[i%3]+' · '+stops[i];
+    const hint=blocked?'Lompat untuk melewati '+barriers[theme][0]+'.':i<0?(stops.length?'Dekati lokasi quest.':'Wilayah ini belum memiliki quest.'):siteAt(theme,i)[0]+' · '+stops[i];
     if(prompt.textContent!==hint)prompt.textContent=hint;
     frame=requestAnimationFrame(tick);
   }
@@ -103,7 +121,7 @@ function explore(host,{theme,stops,name,skin,initial=64,enter,allowed=()=>true})
       members.filter(m=>!m.me&&!m.left).forEach((m,j)=>{
         present.add(m.avatar);let peer=peers.get(m.avatar);
         if(!peer){peer={el:actor(m.name,m.skin||0,false),jump:m.jump};peers.set(m.avatar,peer)}
-        peer.el.style.bottom='calc(15% + '+(4+j*8)+'px)';
+        peer.el.style.bottom='calc(15% + '+(4+j*8+floorAt(m.x))+'px)';
         peer.el.style.left=m.x+'px';
         if(peer.jump!==m.jump){peer.el.animate([{translate:'0 0'},{translate:'0 -105px'},{translate:'0 0'}],550);peer.jump=m.jump}
       });
@@ -114,12 +132,13 @@ function explore(host,{theme,stops,name,skin,initial=64,enter,allowed=()=>true})
   activeTrail=api;return api;
 }
 
-function venueBanner(kind){
+function venueBanner(theme,index){
+  const [name,symbol]=siteAt(theme,index);
   const banner=document.createElement('div');banner.className='venueBanner';
   const canvas=document.createElement('canvas');canvas.width=320;canvas.height=76;
   const g=canvas.getContext('2d');
   function r(x,y,w,h,color){g.fillStyle=color;g.fillRect(x,y,w,h)}
-  if(kind===0){
+  if(symbol==="house"){
     r(0,0,320,76,'#bd916f');r(0,0,320,5,'#62444a');r(0,55,320,21,'#886550');
     for(let x=5;x<320;x+=52)r(x,0,5,54,'#966954');
     for(const x of [25,224]){
@@ -131,8 +150,8 @@ function venueBanner(kind){
     r(109,58,89,5,'#603f3b');r(115,63,5,9,'#69493f');r(188,63,5,9,'#69493f');
     r(141,54,23,4,'#f6deaa');r(151,54,2,4,'#b08860');
   }else{
-    const bg=document.createElement("canvas");bg.width=480;bg.height=128;landscape(kind===1?3:2,bg);g.drawImage(bg,0,0,320,76);
-    g.drawImage(landmark(kind),120,3,87,70);
+    const bg=document.createElement("canvas");bg.width=480;bg.height=128;landscape(theme,bg);g.drawImage(bg,0,0,320,76);
+    g.drawImage(drawSite(symbol),120,3,87,70);
   }
-  canvas.setAttribute('aria-hidden','true');banner.append(canvas,heading('span',kind===0?'Di dalam rumah kitab':sites[kind]));return banner;
+  canvas.setAttribute('aria-hidden','true');banner.append(canvas,heading('span',name));return banner;
 }

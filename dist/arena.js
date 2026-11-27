@@ -69,9 +69,9 @@ function arenaView() {
       if(r && r.phase!=='result'){
         const me=r.members.find(p=>p.me);
         mapHost.append(heading('h2',r.quest==='jumlah'?'Lintasan kebun kurma':'Lintasan desa kitab'),
-          heading('p','← → untuk berjalan, ↑ untuk lompat. Saat balapan, kunjungi lima lokasi sesuai urutan dan tekan E atau Masuk.'));
+          heading('p','← → untuk berjalan, ↑ untuk lompat. Saat balapan, kunjungi lima lokasi sesuai urutan dan tekan E atau Ambil.'));
         trail=explore(mapHost,{name:r.code,theme:r.quest==='jumlah'?3:0,skin:user.skin,initial:me.x,
-          stops:Array.from({length:5},(_,i)=>'Pos '+(i+1)+' · '+sites[i%3]),
+          stops:Array.from({length:5},(_,i)=>'Pos '+(i+1)+' · '+siteAt(r.quest==='jumlah'?3:0,i)[0]),
           allowed:i=>current?.phase==='race'&&!!current?.question&&current.members.find(p=>p.me).step===i,
           enter:i=>{opened=i;modalState='';arenaQuestion()}});
       }
@@ -121,7 +121,7 @@ function arenaView() {
       if(me.place) box.append(heading('p','Waktu finis '+me.elapsed.toFixed(2)+' detik'));
     } else if(r.question) {
       const time=heading('small','Sisa waktu '+remaining+' detik');time.id='arenaClock';
-      box.append(heading('p','Tujuan · '+sites[me.step%3]+' (pos '+(me.step+1)+' dari 5)'),time,
+      box.append(heading('p','Tujuan · '+siteAt(r.quest==='jumlah'?3:0,me.step)[0]+' (pos '+(me.step+1)+' dari 5)'),time,
         btn('Jalan ke pos soal',()=>trail.goto(me.step)));
 
     }
@@ -144,8 +144,8 @@ function arenaView() {
     const state=opened+'-'+retry;
     if(state===modalState){if(!dialog.open)opened=-1;return}
     modalState=state;
-    show(sites[opened%3]+' · Soal '+(opened+1));
-    panel.append(venueBanner(opened%3),heading('h3',r.question.prompt));
+    show(siteAt(r.quest==='jumlah'?3:0,opened)[0]+' · Soal '+(opened+1));
+    panel.append(venueBanner(r.quest==='jumlah'?3:0,opened),heading('h3',r.question.prompt));
     const choices=document.createElement('div');choices.className='choices';panel.append(choices);
     r.question.choices.forEach((choice,i)=>{
       const button=btn(choice,()=>{update('answer',{step:me.step,choice:i})});button.disabled=retry>0;choices.append(button);

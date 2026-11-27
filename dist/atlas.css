@@ -22,3 +22,11 @@
 .venueBanner{position:relative;overflow:hidden;border-radius:8px;margin:0 0 12px}
 .venueBanner canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
 .venueBanner span{position:absolute;bottom:4px;left:6px;background:#302636e8;color:#fff3d3;padding:3px 8px;border-radius:5px;font-size:.8rem}
+
+.trailBarrier{position:absolute;bottom:15%;pointer-events:none;background:#887b79;box-shadow:inset 6px 6px #c1ada0,inset -6px -6px #655665}
+.trailBarrier.rock,.trailBarrier.sand{clip-path:polygon(0 100%,0 57%,15% 40%,26% 6%,70% 0,89% 30%,100% 76%,100% 100%)}
+.trailBarrier.sand{background:#c39868;box-shadow:inset 6px 7px #e4bc82,inset -6px -6px #946c54}
+.trailBarrier.crate{border:5px solid #80583c;background:linear-gradient(37deg,transparent 44%,#dfb37a 45% 55%,transparent 56%),repeating-linear-gradient(90deg,#ab794d 0 10px,#80583c 11px 13px);box-shadow:inset 0 3px #e4be82}
+.trailBarrier.log{border-radius:25% 15% 8% 20%;background:repeating-linear-gradient(0deg,#86593c 0 5px,#a67848 6px 9px);box-shadow:inset 10px 0 #cca367,inset 14px 0 #6f5038}
+.trailBarrier.barrel{border-radius:18%;background:linear-gradient(0deg,transparent 17%,#59616a 18% 28%,transparent 29% 70%,#59616a 71% 81%,transparent 82%),repeating-linear-gradient(90deg,#ba875a 0 9px,#845c40 10px 12px);box-shadow:inset -4px 0 #795741}
+.trailBarrier.wall{background:repeating-linear-gradient(0deg,transparent 0 12px,#716776 13px 15px),repeating-linear-gradient(90deg,#aa9d9c 0 18px,#817783 19px 21px)}
